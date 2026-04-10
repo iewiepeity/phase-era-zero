@@ -1,33 +1,282 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════════
+   賽德里斯配色系統　Plan A — 鐵鏽港夜晚
+   設計師：霓子（UX-05）　Phase 5 正式版
+   ══════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #0a0e1a;
-  --foreground: #c9d6df;
-  --neon-pink: #ff2e63;
-  --metal-silver: #c9d6df;
+  /* 背景層次 */
+  --bg:            #0d1117;
+  --bg-card:       #111820;
+  --bg-elevated:   #192030;
+
+  /* 文字 */
+  --text-primary:  #e2c9a0;
+  --text-muted:    rgba(226, 201, 160, 0.50);
+  --text-faint:    rgba(226, 201, 160, 0.18);
+
+  /* 強調 */
+  --accent:        #ff3864;
+  --accent-glow:   rgba(255,  56, 100, 0.25);
+  --accent-cold:   #5bb8ff;
+  --cold-glow:     rgba( 91, 184, 255, 0.18);
+  --danger:        #ff6b35;
+
+  /* 介面 */
+  --border:        rgba(255, 255, 255, 0.07);
+  --border-hover:  rgba(255, 255, 255, 0.15);
+
+  /* 舊版別名（不要刪，現有頁面依賴） */
+  --background:    var(--bg);
+  --foreground:    var(--text-primary);
+  --neon-pink:     var(--accent);
+  --metal-silver:  var(--text-primary);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-neon-pink: var(--neon-pink);
-  --color-metal-silver: var(--metal-silver);
+  --color-background:   var(--bg);
+  --color-foreground:   var(--text-primary);
+  --color-neon-pink:    var(--accent);
+  --color-metal-silver: var(--text-primary);
   --font-serif: var(--font-noto-serif-tc);
-  --font-sans: var(--font-inter);
+  --font-sans:  var(--font-inter);
+  --font-mono:  var(--font-jetbrains-mono);
 }
+
+/* ── 基礎 ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text-primary);
   font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 訊息漸入動畫 */
+/* ── 全局掃描線疊加（微妙 CRT 感）──────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.035) 3px,
+    rgba(0, 0, 0, 0.035) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  will-change: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   動畫 Keyframes
+   ══════════════════════════════════════════════════════════════ */
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.25s ease-out forwards;
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fade-in-slow {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 1;    }
+  50%       { opacity: 0.50; }
+}
+
+@keyframes page-scan {
+  0%   { transform: translateY(-100vh); opacity: 0;   }
+  4%   { opacity: 0.7; }
+  96%  { opacity: 0.5; }
+  100% { transform: translateY(200vh);  opacity: 0;   }
+}
+
+@keyframes grid-drift {
+  from { background-position: 0 0;      }
+  to   { background-position: 48px 48px; }
+}
+
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: 0 0 12px var(--accent-glow); }
+  50%       { box-shadow: 0 0 32px var(--accent-glow), 0 0 64px rgba(255,56,100,0.10); }
+}
+
+@keyframes title-appear {
+  0%   { opacity: 0; letter-spacing: 0.6em; filter: blur(4px); }
+  100% { opacity: 1; letter-spacing: 0.2em; filter: blur(0);   }
+}
+
+@keyframes score-fill {
+  from { stroke-dasharray: 0 226; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   動畫工具類
+   ══════════════════════════════════════════════════════════════ */
+
+.animate-fade-in        { animation: fade-in      0.25s ease-out          forwards; }
+.animate-fade-in-up     { animation: fade-in-up   0.55s ease-out          forwards; }
+.animate-fade-in-slow   { animation: fade-in-slow 1.5s  ease-out          forwards; }
+.animate-neon-pulse     { animation: neon-pulse   2.5s  ease-in-out       infinite; }
+.animate-glow-breathe   { animation: glow-breathe 3s    ease-in-out       infinite; }
+.animate-title-appear   { animation: title-appear 0.9s  cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-score-fill     { animation: score-fill   1.6s  ease-out          forwards; }
+
+/* 延遲變體 */
+.delay-100  { animation-delay: 0.1s; }
+.delay-200  { animation-delay: 0.2s; }
+.delay-300  { animation-delay: 0.3s; }
+.delay-500  { animation-delay: 0.5s; }
+.delay-700  { animation-delay: 0.7s; }
+.delay-1000 { animation-delay: 1.0s; }
+
+/* ══════════════════════════════════════════════════════════════
+   背景工具
+   ══════════════════════════════════════════════════════════════ */
+
+/* 動態格子（首頁用） */
+.bg-grid-animated {
+  background-image:
+    linear-gradient(rgba(91, 184, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 184, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: grid-drift 24s linear infinite;
+}
+
+/* 靜態格子（場景頁用） */
+.bg-grid-static {
+  background-image:
+    linear-gradient(rgba(91, 184, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 184, 255, 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* 掃描線（覆蓋在 overflow-hidden 容器內） */
+.page-scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(91, 184, 255, 0.4), transparent);
+  animation: page-scan 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   光暈工具
+   ══════════════════════════════════════════════════════════════ */
+
+.glow-text-accent {
+  text-shadow: 0 0 18px rgba(255, 56, 100, 0.55), 0 0 56px rgba(255, 56, 100, 0.20);
+}
+
+.glow-text-cold {
+  text-shadow: 0 0 18px rgba(91, 184, 255, 0.55), 0 0 56px rgba(91, 184, 255, 0.20);
+}
+
+.glow-box-accent {
+  box-shadow: 0 0 18px rgba(255, 56, 100, 0.15), 0 0 48px rgba(255, 56, 100, 0.06);
+}
+
+.glow-box-accent-strong {
+  box-shadow: 0 0 24px rgba(255, 56, 100, 0.30), 0 0 64px rgba(255, 56, 100, 0.12);
+}
+
+.glow-box-cold {
+  box-shadow: 0 0 18px rgba(91, 184, 255, 0.12), 0 0 48px rgba(91, 184, 255, 0.05);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   漸層文字
+   ══════════════════════════════════════════════════════════════ */
+
+.text-gradient-warm {
+  background: linear-gradient(135deg, #ff3864 0%, #ff8c55 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cold {
+  background: linear-gradient(135deg, #5bb8ff 0%, #b8e0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   卡片 + 互動
+   ══════════════════════════════════════════════════════════════ */
+
+.card-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   角落括號裝飾
+   ══════════════════════════════════════════════════════════════ */
+
+.corner-bracket {
+  position: relative;
+}
+
+.corner-bracket::before,
+.corner-bracket::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-style: solid;
+  border-color: rgba(91, 184, 255, 0.22);
+}
+
+.corner-bracket::before {
+  top: 0; left: 0;
+  border-width: 1px 0 0 1px;
+}
+
+.corner-bracket::after {
+  bottom: 0; right: 0;
+  border-width: 0 1px 1px 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   打字機游標
+   ══════════════════════════════════════════════════════════════ */
+
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgba(226, 201, 160, 0.65);
+  margin-left: 2px;
+  animation: neon-pulse 1s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Mono 字體工具
+   ══════════════════════════════════════════════════════════════ */
+
+.font-mono-sys {
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  letter-spacing: 0.06em;
 }

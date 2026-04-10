@@ -23,13 +23,28 @@ interface NpcStateUI {
   conversationCount: number;
 }
 
-type LoadState = "idle" | "loading" | "ready" | "error";
+type LoadState = "idle" | "loading" | "ready";
 type ErrorKind = "rate_limit" | "server_error" | "network" | null;
 
-const TYPING_MS = 28;
+const TYPING_MS = 26;
+
+// ── NPC 視覺配色（未來可從 registry 擴展）────────────────────
+const NPC_COLOR: Record<string, { dot: string; bubble: string; border: string }> = {
+  chen_jie: {
+    dot:    "#f59e0b",
+    bubble: "rgba(245,158,11,0.06)",
+    border: "rgba(245,158,11,0.18)",
+  },
+};
+
+const DEFAULT_NPC_COLOR = {
+  dot:    "#5bb8ff",
+  bubble: "rgba(91,184,255,0.06)",
+  border: "rgba(91,184,255,0.15)",
+};
 
 // ── 工具 ──────────────────────────────────────────────────────
-function genId() { return Math.random().toString(36).slice(2, 10); }
+function genId()   { return Math.random().toString(36).slice(2, 10); }
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
@@ -49,23 +64,23 @@ export default function GameChatPage() {
   const sessionId = params.sessionId as string;
   const npcId     = params.npcId     as string;
 
-  // 從 registry 取 NPC 顯示資訊
-  const npc        = getNpc(npcId);
-  const NPC_NAME   = npc?.name     ?? npcId;
-  const NPC_LOC    = npc?.location ?? "";
+  const npc      = getNpc(npcId);
+  const NPC_NAME = npc?.name     ?? npcId;
+  const NPC_LOC  = npc?.location ?? "";
+  const npcColor = NPC_COLOR[npcId] ?? DEFAULT_NPC_COLOR;
 
-  const [messages,   setMessages]   = useState<Message[]>([]);
-  const [input,      setInput]      = useState("");
-  const [sending,    setSending]    = useState(false);
-  const [loadState,  setLoadState]  = useState<LoadState>("idle");
-  const [errorKind,  setErrorKind]  = useState<ErrorKind>(null);
-  const [npcState,   setNpcState]   = useState<NpcStateUI>({ trustLevel: 0, conversationCount: 0 });
+  const [messages,  setMessages]  = useState<Message[]>([]);
+  const [input,     setInput]     = useState("");
+  const [sending,   setSending]   = useState(false);
+  const [loadState, setLoadState] = useState<LoadState>("idle");
+  const [errorKind, setErrorKind] = useState<ErrorKind>(null);
+  const [npcState,  setNpcState]  = useState<NpcStateUI>({ trustLevel: 0, conversationCount: 0 });
 
   const bottomRef  = useRef<HTMLDivElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
   const hasMounted = useRef(false);
 
-  // ── 初始化：載入對話歷史 ──────────────────────────────────────
+  // ── 初始化 ────────────────────────────────────────────────────
   useEffect(() => {
     if (hasMounted.current) return;
     hasMounted.current = true;
@@ -87,28 +102,26 @@ export default function GameChatPage() {
   async function loadHistory(sid: string) {
     setLoadState("loading");
     try {
-      const res = await fetch(`/api/chat?sessionId=${sid}&npcId=${npcId}`);
-      if (!res.ok) throw new Error("fetch failed");
+      const res  = await fetch(`/api/chat?sessionId=${sid}&npcId=${npcId}`);
+      if (!res.ok) throw new Error();
       const data = await res.json();
 
       if (!data.messages?.length) {
         setMessages([makeNpcMsg(getGreeting(), false)]);
       } else {
-        const restored: Message[] = data.messages.map(
-          (m: { role: string; content: string; created_at: string }) => ({
-            id: genId(),
-            role: m.role === "assistant" ? "npc" : "user",
-            content: m.content,
+        setMessages(
+          data.messages.map((m: { role: string; content: string; created_at: string }) => ({
+            id:        genId(),
+            role:      m.role === "assistant" ? "npc" : "user",
+            content:   m.content,
             createdAt: new Date(m.created_at),
-            isNew: false,
-          })
+            isNew:     false,
+          }))
         );
-        setMessages(restored);
       }
-
       if (data.npcState) {
         setNpcState({
-          trustLevel: data.npcState.trust_level ?? 0,
+          trustLevel:        data.npcState.trust_level       ?? 0,
           conversationCount: data.npcState.conversation_count ?? 0,
         });
       }
@@ -119,62 +132,49 @@ export default function GameChatPage() {
     }
   }
 
-  // ── 打字機 ────────────────────────────────────────────────────
+  // ── 打字機 ─────────────────────────────────────────────────
   useEffect(() => {
     const typing = messages.find((m) => m.isTyping);
     if (!typing) return;
     const len = typing.typedLength ?? 0;
     if (len >= typing.content.length) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === typing.id ? { ...m, isTyping: false, typedLength: undefined } : m
-        )
-      );
+      setMessages((prev) => prev.map((m) =>
+        m.id === typing.id ? { ...m, isTyping: false, typedLength: undefined } : m
+      ));
       return;
     }
-    const t = setTimeout(
-      () =>
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === typing.id ? { ...m, typedLength: (m.typedLength ?? 0) + 1 } : m
-          )
-        ),
-      TYPING_MS
-    );
+    const t = setTimeout(() => setMessages((prev) => prev.map((m) =>
+      m.id === typing.id ? { ...m, typedLength: (m.typedLength ?? 0) + 1 } : m
+    )), TYPING_MS);
     return () => clearTimeout(t);
   }, [messages]);
 
-  // ── 自動滾到底 ────────────────────────────────────────────────
+  // ── 自動滾底 ───────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── 建立訊息物件 ──────────────────────────────────────────────
+  // ── 建立 NPC 訊息 ─────────────────────────────────────────
   function makeNpcMsg(content: string, withTyping = true): Message {
     return {
-      id: genId(),
-      role: "npc",
+      id:          genId(),
+      role:        "npc",
       content,
-      createdAt: new Date(),
-      isTyping: withTyping,
+      createdAt:   new Date(),
+      isTyping:    withTyping,
       typedLength: withTyping ? 0 : undefined,
-      isNew: true,
+      isNew:       true,
     };
   }
 
-  // ── 傳送訊息 ──────────────────────────────────────────────────
+  // ── 送出訊息 ──────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
 
     const userMsg: Message = {
-      id: genId(),
-      role: "user",
-      content: text,
-      createdAt: new Date(),
-      isNew: true,
+      id: genId(), role: "user", content: text, createdAt: new Date(), isNew: true,
     };
-
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setSending(true);
@@ -183,47 +183,33 @@ export default function GameChatPage() {
     const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
+      const res  = await fetch("/api/chat", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: allMessages,
-          sessionId,
-          npcId,
-        }),
+        body:    JSON.stringify({ messages: allMessages, sessionId, npcId }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
         const kind = data.error === "rate_limit" ? "rate_limit" : "server_error";
         setErrorKind(kind);
-        setMessages((prev) => [
-          ...prev,
-          makeNpcMsg(
-            kind === "rate_limit"
-              ? "（陳姐暫時沒空，你等一下再來。）"
-              : "（陳姐好像在想什麼，沒有回應。）",
-            false
-          ),
-        ]);
+        setMessages((prev) => [...prev, makeNpcMsg(
+          kind === "rate_limit" ? "（陳姐暫時沒空，你等一下再來。）" : "（陳姐好像在想什麼，沒有回應。）",
+          false
+        )]);
         return;
       }
 
       if (typeof data.newTrustLevel === "number") {
         setNpcState((prev) => ({
-          trustLevel: data.newTrustLevel,
+          trustLevel:        data.newTrustLevel,
           conversationCount: prev.conversationCount + 1,
         }));
       }
-
       setMessages((prev) => [...prev, makeNpcMsg(data.reply, true)]);
     } catch {
       setErrorKind("network");
-      setMessages((prev) => [
-        ...prev,
-        makeNpcMsg("（店裡訊號不好，聲音斷了。）", false),
-      ]);
+      setMessages((prev) => [...prev, makeNpcMsg("（店裡訊號不好，聲音斷了。）", false)]);
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -235,119 +221,164 @@ export default function GameChatPage() {
   }
 
   function getDisplayContent(msg: Message): string {
-    if (!msg.isTyping) return msg.content;
-    return msg.content.slice(0, msg.typedLength ?? 0);
+    return msg.isTyping ? msg.content.slice(0, msg.typedLength ?? 0) : msg.content;
   }
 
   const isTypingAnything = messages.some((m) => m.isTyping);
+  const trustPercent     = Math.min(100, npcState.trustLevel);
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto">
-      {/* 標題列 */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-[#c9d6df]/10">
+    <div className="flex flex-col h-screen max-w-2xl mx-auto bg-[#0d1117]">
+
+      {/* ── 標題列 ───────────────────────────────────────── */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-[#e2c9a0]/6 shrink-0">
         <Link
           href={`/game/${sessionId}`}
-          className="text-xs text-[#c9d6df]/40 hover:text-[#c9d6df]/70 transition-colors tracking-wider"
+          className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 tracking-widest transition-colors"
         >
           ← 返回
         </Link>
 
-        <div className="text-center">
-          <p
-            className="text-sm tracking-widest"
-            style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
-          >
-            {NPC_NAME}
+        {/* NPC 名稱 + 彩色點 */}
+        <div className="text-center flex flex-col items-center gap-0.5">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full animate-neon-pulse"
+              style={{ background: npcColor.dot, boxShadow: `0 0 6px ${npcColor.dot}` }}
+            />
+            <p
+              className="text-sm tracking-widest text-[#e2c9a0]"
+              style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+            >
+              {NPC_NAME}
+            </p>
+          </div>
+          <p className="font-mono-sys text-[9px] tracking-widest" style={{ color: `${npcColor.dot}60` }}>
+            {NPC_LOC}
           </p>
-          <p className="text-xs text-[#c9d6df]/30 tracking-wide">{NPC_LOC}</p>
         </div>
 
         {/* 信任度 */}
-        <div className="flex flex-col items-end gap-0.5">
-          <span className="text-[10px] text-[#c9d6df]/30 tracking-wide">
+        <div className="flex flex-col items-end gap-1">
+          <span className="font-mono-sys text-[9px] tracking-widest" style={{ color: `${npcColor.dot}70` }}>
             {trustLabel(npcState.trustLevel)}
           </span>
-          <div className="flex gap-0.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={`w-4 h-0.5 rounded-full transition-colors duration-500 ${
-                  npcState.trustLevel >= (i + 1) * 20
-                    ? "bg-[#ff2e63]"
-                    : "bg-[#c9d6df]/15"
-                }`}
-              />
-            ))}
+          {/* 細進度條 */}
+          <div className="w-14 h-[2px] rounded-full bg-[#e2c9a0]/8 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width:      `${trustPercent}%`,
+                background: `linear-gradient(90deg, ${npcColor.dot}99, ${npcColor.dot})`,
+                boxShadow:  `0 0 6px ${npcColor.dot}80`,
+              }}
+            />
           </div>
         </div>
       </header>
 
-      {/* 對話區 */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      {/* ── 對話區 ──────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+
+        {/* 載入中 */}
         {loadState === "loading" && (
-          <div className="flex justify-center py-8">
-            <span className="text-xs text-[#c9d6df]/30 tracking-widest animate-pulse">
-              讀取對話紀錄…
+          <div className="flex justify-center py-10">
+            <span className="font-mono-sys text-[11px] text-[#e2c9a0]/28 tracking-widest animate-neon-pulse">
+              LOADING...
             </span>
           </div>
         )}
 
-        {loadState !== "loading" &&
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} ${
-                msg.isNew !== false ? "animate-fade-in" : ""
-              }`}
-            >
-              <div className="flex flex-col gap-1 max-w-[75%]">
+        {/* 訊息列表 */}
+        {loadState !== "loading" && messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} ${
+              msg.isNew !== false ? "animate-fade-in" : ""
+            }`}
+          >
+            {/* NPC 訊息 */}
+            {msg.role === "npc" && (
+              <div className="flex items-start gap-2.5 max-w-[80%]">
+                {/* NPC 頭像點 */}
+                <div className="shrink-0 mt-3">
+                  <div
+                    className="w-2 h-2 rounded-full mt-0.5"
+                    style={{
+                      background: npcColor.dot,
+                      boxShadow:  `0 0 5px ${npcColor.dot}80`,
+                    }}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div
+                    className="px-4 py-3 rounded-r-lg rounded-bl-lg text-sm leading-[1.9] whitespace-pre-wrap border"
+                    style={{
+                      fontFamily:  "var(--font-noto-serif-tc), serif",
+                      color:       "#e2c9a0cc",
+                      background:  npcColor.bubble,
+                      borderColor: npcColor.border,
+                    }}
+                  >
+                    {getDisplayContent(msg)}
+                    {msg.isTyping && <span className="typing-cursor" />}
+                  </div>
+                  <span className="font-mono-sys text-[9px] text-[#e2c9a0]/18 pl-1">
+                    {formatTime(msg.createdAt)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 用戶訊息 */}
+            {msg.role === "user" && (
+              <div className="flex flex-col gap-1 items-end max-w-[75%]">
                 <div
-                  className={`px-4 py-3 rounded text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === "user"
-                      ? "bg-[#ff2e63]/20 border border-[#ff2e63]/30 text-[#c9d6df]"
-                      : "bg-[#c9d6df]/5 border border-[#c9d6df]/10 text-[#c9d6df]"
-                  }`}
-                  style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  className="px-4 py-3 rounded-l-lg rounded-br-lg text-sm leading-[1.9] whitespace-pre-wrap border"
+                  style={{
+                    fontFamily:      "var(--font-noto-serif-tc), serif",
+                    color:           "#e2c9a0cc",
+                    background:      "rgba(255,56,100,0.06)",
+                    borderColor:     "rgba(255,56,100,0.22)",
+                  }}
                 >
                   {getDisplayContent(msg)}
-                  {msg.isTyping && (
-                    <span className="inline-block w-[2px] h-[1em] bg-[#c9d6df]/50 ml-0.5 animate-pulse align-middle" />
-                  )}
                 </div>
-                <span
-                  className={`text-[10px] text-[#c9d6df]/20 ${
-                    msg.role === "user" ? "text-right" : "text-left"
-                  }`}
-                >
+                <span className="font-mono-sys text-[9px] text-[#e2c9a0]/18 pr-1">
                   {formatTime(msg.createdAt)}
                 </span>
               </div>
-            </div>
-          ))}
+            )}
+          </div>
+        ))}
 
-        {/* 等待動畫 */}
+        {/* 等待三點動畫 */}
         {sending && !isTypingAnything && (
-          <div className="flex justify-start">
-            <div className="px-4 py-3 rounded border border-[#c9d6df]/10 flex items-center gap-1.5">
+          <div className="flex justify-start pl-6">
+            <div
+              className="px-4 py-3 rounded-r-lg rounded-bl-lg border flex items-center gap-1.5"
+              style={{ borderColor: npcColor.border, background: npcColor.bubble }}
+            >
               {[0, 150, 300].map((delay, i) => (
                 <span
                   key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-[#c9d6df]/30 animate-bounce"
-                  style={{ animationDelay: `${delay}ms` }}
+                  className="w-1.5 h-1.5 rounded-full animate-bounce"
+                  style={{ background: `${npcColor.dot}70`, animationDelay: `${delay}ms` }}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* 錯誤 */}
+        {/* 錯誤橫幅 */}
         {errorKind && (
           <div className="flex justify-center">
-            <span className="text-[11px] text-[#ff2e63]/60 border border-[#ff2e63]/20 px-3 py-1 rounded tracking-wide">
+            <span className="font-mono-sys text-[10px] text-[#ff3864]/55 border border-[#ff3864]/15 px-3 py-1.5 rounded tracking-wide">
               {errorKind === "rate_limit"
-                ? "API 請求頻率超限，請稍候再試"
+                ? "請求頻率超限，請稍候再試"
                 : errorKind === "network"
-                ? "網路連線中斷，請確認後重試"
+                ? "網路連線中斷"
                 : "伺服器暫時異常"}
             </span>
           </div>
@@ -356,8 +387,8 @@ export default function GameChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* 底部輸入 */}
-      <div className="border-t border-[#c9d6df]/10 px-4 pb-4 pt-3 flex gap-2">
+      {/* ── 輸入列 ──────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-[#e2c9a0]/6 px-4 pb-4 pt-3 flex gap-2">
         <input
           ref={inputRef}
           type="text"
@@ -367,13 +398,20 @@ export default function GameChatPage() {
           placeholder="說點什麼…"
           disabled={sending || loadState === "loading"}
           maxLength={300}
-          className="flex-1 bg-transparent border border-[#c9d6df]/20 rounded px-3 py-2 text-sm text-[#c9d6df] placeholder-[#c9d6df]/20 focus:outline-none focus:border-[#c9d6df]/40 disabled:opacity-40 transition-colors"
+          autoFocus
+          className="flex-1 bg-[#111820] border border-[#e2c9a0]/12 rounded px-3 py-2.5 text-sm text-[#e2c9a0]/80 placeholder-[#e2c9a0]/18 focus:outline-none focus:border-[#e2c9a0]/28 disabled:opacity-40 transition-colors"
           style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
         />
         <button
           onClick={sendMessage}
           disabled={sending || !input.trim() || loadState === "loading"}
-          className="px-4 py-2 rounded border border-[#ff2e63]/50 text-[#ff2e63] text-sm hover:bg-[#ff2e63]/10 active:bg-[#ff2e63]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="px-4 py-2.5 rounded border text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            borderColor: `${npcColor.dot}60`,
+            color:        npcColor.dot,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = `${npcColor.dot}15`; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
         >
           送出
         </button>
