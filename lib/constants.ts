@@ -35,6 +35,46 @@ export const NPC_COLORS: Record<string, { dot: string; bubble: string; border: s
     bubble: "rgba(245,158,11,0.06)",
     border: "rgba(245,158,11,0.18)",
   },
+  hanzhuo: {
+    dot:    "#5bb8ff",
+    bubble: "rgba(91,184,255,0.06)",
+    border: "rgba(91,184,255,0.18)",
+  },
+  yushuang: {
+    dot:    "#c084fc",
+    bubble: "rgba(192,132,252,0.06)",
+    border: "rgba(192,132,252,0.18)",
+  },
+  zhengbo: {
+    dot:    "#60a5fa",
+    bubble: "rgba(96,165,250,0.06)",
+    border: "rgba(96,165,250,0.18)",
+  },
+  it: {
+    dot:    "#4ade80",
+    bubble: "rgba(74,222,128,0.05)",
+    border: "rgba(74,222,128,0.16)",
+  },
+  baiqiu: {
+    dot:    "#f0abfc",
+    bubble: "rgba(240,171,252,0.05)",
+    border: "rgba(240,171,252,0.16)",
+  },
+  zhuanghe: {
+    dot:    "#94a3b8",
+    bubble: "rgba(148,163,184,0.05)",
+    border: "rgba(148,163,184,0.16)",
+  },
+  linzhixia: {
+    dot:    "#fb923c",
+    bubble: "rgba(251,146,60,0.06)",
+    border: "rgba(251,146,60,0.18)",
+  },
+  taosheng: {
+    dot:    "#a3e635",
+    bubble: "rgba(163,230,53,0.05)",
+    border: "rgba(163,230,53,0.14)",
+  },
 };
 
 /** 找不到指定 NPC 時的預設色 */

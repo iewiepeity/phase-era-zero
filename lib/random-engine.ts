@@ -18,7 +18,42 @@ import {
   getAllValidPairs,
 } from "./case-config";
 
-export { buildChenJieClues } from "./content/clues-chen-jie";
+import type { Clue }           from "./npc-registry";
+import { buildChenJieClues }   from "./content/clues-chen-jie";
+import { buildHanzhuoClues }   from "./content/clues-hanzhuo";
+import { buildYushuangClues }  from "./content/clues-yushuang";
+import { buildZhengboClues }   from "./content/clues-zhengbo";
+import { buildItClues }        from "./content/clues-it";
+import { buildBaiqiuClues }    from "./content/clues-baiqiu";
+import { buildZhuangheClues }  from "./content/clues-zhuanghe";
+import { buildLinzhixiaClues } from "./content/clues-linzhixia";
+import { buildTaoshengClues }  from "./content/clues-taosheng";
+
+export { buildChenJieClues };
+export { buildHanzhuoClues };
+export { buildYushuangClues };
+export { buildZhengboClues };
+export { buildItClues };
+export { buildBaiqiuClues };
+export { buildZhuangheClues };
+export { buildLinzhixiaClues };
+export { buildTaoshengClues };
+
+/** 根據 npcId + CaseConfig 產生對應 NPC 的動態線索 */
+export function buildNpcClues(npcId: string, config: CaseConfig): Clue[] {
+  switch (npcId) {
+    case "chen_jie":  return buildChenJieClues(config);
+    case "hanzhuo":   return buildHanzhuoClues(config);
+    case "yushuang":  return buildYushuangClues(config);
+    case "zhengbo":   return buildZhengboClues(config);
+    case "it":        return buildItClues(config);
+    case "baiqiu":    return buildBaiqiuClues(config);
+    case "zhuanghe":  return buildZhuangheClues(config);
+    case "linzhixia": return buildLinzhixiaClues(config);
+    case "taosheng":  return buildTaoshengClues(config);
+    default:          return [];
+  }
+}
 
 // ── Seed-based 偽隨機（mulberry32）────────────────────────────
 // 純函式，不依賴 Math.random()，可重現

@@ -17,7 +17,7 @@ import {
   DEFAULT_PLAYER_STATS,
 } from "@/lib/npc-engine";
 import { getNpc } from "@/lib/npc-registry";
-import { buildChenJieClues } from "@/lib/random-engine";
+import { buildNpcClues } from "@/lib/random-engine";
 import type { ChatMessage } from "@/lib/types";
 
 // ── GET /api/chat — 載入對話歷史 ──────────────────────────────
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     // 4. 組裝 System Prompt（含動態線索）
     const caseConfig    = resolvedSessionId ? await getCaseConfig(resolvedSessionId) : null;
-    const dynamicClues  = caseConfig ? buildChenJieClues(caseConfig) : undefined;
+    const dynamicClues  = caseConfig ? buildNpcClues(npcId, caseConfig) : undefined;
 
     const systemPrompt = buildNpcPrompt({
       npcId,

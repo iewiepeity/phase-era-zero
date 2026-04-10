@@ -51,7 +51,15 @@ export const GAME_INTRO = `P.E. 02 年，賽德里斯，中城區。
  * key 為 npcId，value 為招呼文字。
  */
 export const NPC_GREETINGS: Record<string, string> = {
-  chen_jie: "坐啊，要吃什麼？今天的湯麵不錯。",
+  chen_jie:  "坐啊，要吃什麼？今天的湯麵不錯。",
+  hanzhuo:   "……你找我有什麼事？我現在很忙。",
+  yushuang:  "你好。有什麼我可以幫你的嗎？",
+  zhengbo:   "你是來找陳姐的嗎。坐吧，我不用這個位子。",
+  it:        "你好。我在等人。你也在等人嗎？",
+  baiqiu:    "什麼事。",
+  zhuanghe:  "坐吧。茶還熱的。",
+  linzhixia: "你也在做田野嗎？你研究什麼方向的？",
+  taosheng:  "哎，你來這裡幹嘛？找工嗎？",
 };
 
 /** 找不到對應 npcId 時的預設招呼語 */
@@ -63,3 +71,19 @@ export const DEFAULT_GREETING = "……";
 export function getNpcGreeting(npcId: string): string {
   return NPC_GREETINGS[npcId] ?? DEFAULT_GREETING;
 }
+
+// ── 場景氛圍文字 ──────────────────────────────────────────────
+
+/**
+ * 各場景進入時的額外氛圍敘述（可選，顯示在場景卡片描述下方）。
+ */
+export const SCENE_ATMOSPHERE: Record<string, string> = {
+  chen_jie_noodles:
+    "麵館的燈光把每個人的臉都照得有點黃。陳姐沒有問你為什麼來，她只問你要不要加辣。",
+  crime_scene:
+    "警察用的封鎖線在風裡輕輕搖著。現場沒有人，但你感覺有人剛剛離開。",
+  foggy_port:
+    "海霧在燈光裡呈現出一種不透明的白。你聽得到船的聲音，但你看不到船。",
+  ninth_precinct:
+    "走廊的日光燈有一盞在閃。你不確定進來是對的，但你已經在這裡了。",
+};
