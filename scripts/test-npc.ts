@@ -75,7 +75,7 @@ async function runQuickTest() {
   console.log("🔑 API Key 末四碼：..." + apiKey.slice(-4));
   console.log("\n========================================");
   console.log("Phase 0 陳姐 NPC 快速測試");
-  console.log("模型：gemini-2.0-flash");
+  console.log("模型：gemini-2.5-flash");
   console.log("模式：互動對話（輸入 quit 離開）");
   console.log("========================================\n");
   console.log("📋 測試提示：");
@@ -86,7 +86,7 @@ async function runQuickTest() {
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     systemInstruction: systemPrompt,
   });
 

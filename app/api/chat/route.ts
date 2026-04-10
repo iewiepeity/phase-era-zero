@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = buildChenJiePrompt(clue || "（線索尚未設定）");
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: systemPrompt,
     });
 
