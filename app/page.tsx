@@ -28,22 +28,22 @@ export default function Home() {
       {/* 按鈕區 */}
       <div className="flex flex-col gap-4 w-full max-w-xs">
         <Link
-          href="/chat"
+          href="/game"
           className="block w-full py-3 px-8 rounded border border-[#ff2e63] text-[#ff2e63] hover:bg-[#ff2e63] hover:text-[#0a0e1a] transition-colors duration-200 tracking-wider text-sm"
         >
           進入賽德里斯
         </Link>
         <Link
-          href="/chat?guest=true"
+          href="/chat"
           className="block w-full py-3 px-8 rounded border border-[#c9d6df]/30 text-[#c9d6df]/50 hover:border-[#c9d6df]/60 hover:text-[#c9d6df]/80 transition-colors duration-200 tracking-wider text-sm"
         >
-          訪客試玩
+          陳姐麵館（Demo）
         </Link>
       </div>
 
       {/* 底部小字 */}
       <p className="absolute bottom-8 text-xs text-[#c9d6df] opacity-20 tracking-widest">
-        Phase 0　技術驗證中
+        Phase 4　垂直切片
       </p>
     </main>
   );

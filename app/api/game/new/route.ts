@@ -57,7 +57,12 @@ export async function POST(req: NextRequest) {
       sessionId = data.id;
     }
 
-    // 3. 回傳（不含 truthString / 兇手身份）
+    // 3. 若沒有 DB，用本地 ID 讓 UI 仍可導航（無法持久化）
+    if (!sessionId) {
+      sessionId = `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    // 4. 回傳（不含 truthString / 兇手身份）
     return NextResponse.json({
       sessionId,
       motiveCount: 4,           // 供 UI 顯示「4 個動機方向待解」

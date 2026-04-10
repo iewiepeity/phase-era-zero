@@ -7,13 +7,13 @@
 // 此腳本需要先 `npm run build`，或用 tsx/ts-node 執行。
 // 建議：npx tsx scripts/test-random-engine.mjs
 
-import { generateCase, isValidPair, validateCase } from "../lib/random-engine.ts";
-import { getAllValidPairs } from "../lib/case-config.ts";
+import { generateCase, isValidPair, validateCase } from "../lib/random-engine";
+import { getAllValidPairs } from "../lib/case-config";
 
 let passed = 0;
 let failed = 0;
 
-function assert(condition, label) {
+function assert(condition: boolean, label: string) {
   if (condition) {
     console.log(`  ✓ ${label}`);
     passed++;
@@ -39,7 +39,7 @@ assert(isValidPair("it",      "C") === true,  "it + C 合法");
 // ── 3. generateCase() 生成 200 個案件全合法 ───────────────────
 console.log("\n[3] generateCase() 200 次全合法");
 let invalidCount = 0;
-const distribution = {};
+const distribution: Record<string, number> = {};
 
 for (let i = 0; i < 200; i++) {
   const seed = i * 12345 + 67890;
@@ -47,7 +47,7 @@ for (let i = 0; i < 200; i++) {
   try {
     config = generateCase({ seed });
   } catch (e) {
-    console.error(`  ✗ seed ${seed} 拋出例外：${e.message}`);
+    console.error(`  ✗ seed ${seed} 拋出例外：${e instanceof Error ? e.message : String(e)}`);
     invalidCount++;
     continue;
   }
