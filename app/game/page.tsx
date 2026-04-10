@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useGameSession } from "@/hooks/useGameSession";
+import { LOBBY_DESCRIPTION } from "@/lib/content/narrative";
 
 export default function GameLobbyPage() {
   const { starting, error, existingSession, mounted, startNewGame } = useGameSession();
@@ -48,8 +49,7 @@ export default function GameLobbyPage() {
             className="text-sm text-[#e2c9a0]/45 leading-[2.0]"
             style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
           >
-            十四人失蹤。你的名字出現在每一個人的通話紀錄裡。
-            找出真正的兇手——在他們關上牢門之前。
+            {LOBBY_DESCRIPTION}
           </p>
         </div>
 

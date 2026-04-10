@@ -6,6 +6,7 @@ import Link from "next/link";
 import { SUSPECTS, MOTIVES } from "@/lib/case-config";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { ScoreRing } from "@/components/ui/ScoreRing";
+import { WIN_TEXTS, LOSE_KILLER_TEXTS, LOSE_MOTIVE_TEXTS } from "@/lib/content/endings";
 import type { KillerId, MotiveDirection } from "@/lib/case-config";
 
 interface AccuseResult {
@@ -17,24 +18,7 @@ interface AccuseResult {
   answer:         { killerId: KillerId; motiveDirection: MotiveDirection };
 }
 
-// ── 風味文字 ──────────────────────────────────────────────────
-const WIN_TEXTS = [
-  "你做到了。案子還沒有蓋棺定論，但你讓事情走向了某種公正。",
-  "他們沒辦法再繼續沉默了。賽德里斯欠你一個答案，今天你拿到了。",
-  "真相浮出水面的聲音不像爆炸。它更像是——水。",
-];
-
-const LOSE_KILLER_TEXTS = [
-  "你指錯了人。真正的兇手在某個地方，繼續過著他的日子。",
-  "第九分局拿到了他們想要的東西：一個替罪羊。",
-];
-
-const LOSE_MOTIVE_TEXTS = [
-  "兇手找對了，但你沒有搞清楚他為什麼這麼做。",
-  "方向錯了。他的動機比你想的更複雜，或者更簡單。",
-];
-
-function pickText(arr: string[], seed: number): string {
+function pickText(arr: readonly string[], seed: number): string {
   return arr[seed % arr.length];
 }
 

@@ -7,18 +7,8 @@ import { SCENES } from "@/lib/scene-config";
 import { STORAGE_KEYS, INTRO_TYPING_MS } from "@/lib/constants";
 import { useTypewriter } from "@/hooks/useTypewriter";
 import { SceneCard } from "@/components/game/SceneCard";
+import { GAME_INTRO } from "@/lib/content/narrative";
 import type { Scene } from "@/lib/scene-config";
-
-// ── 開場敘述文本 ──────────────────────────────────────────────
-const INTRO_FULL = `P.E. 02 年，賽德里斯，中城區。
-
-第十四名失蹤者昨晚消失。
-
-警方沒有找到屍體，但他們找到了你的名字——出現在每一個失蹤者的通話紀錄裡。
-
-你不是兇手。但你需要證明這件事，在第九分局拿到逮捕令之前。
-
-你在中城區還有一點自由的時間。城市裡有人知道真相——找出他們，找出真正的兇手。`;
 
 export default function GameHubPage() {
   const params    = useParams();
@@ -32,7 +22,7 @@ export default function GameHubPage() {
   const hasMounted = useRef(false);
 
   const { displayed, isDone, skip } = useTypewriter({
-    text:    INTRO_FULL,
+    text:    GAME_INTRO,
     speed:   INTRO_TYPING_MS,
     enabled: showIntro && !introDone,
   });

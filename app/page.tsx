@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HOMEPAGE_SUBTITLE_LINES } from "@/lib/content/narrative";
 
 export default function Home() {
   return (
@@ -88,11 +89,11 @@ export default function Home() {
           className="text-sm text-[#e2c9a0]/40 tracking-wide leading-[2.2] mb-12 max-w-xs opacity-0 animate-fade-in-up delay-700"
           style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
         >
-          十四人失蹤
+          {HOMEPAGE_SUBTITLE_LINES[0]}
           <br />
-          一個你不認識的兇手
+          {HOMEPAGE_SUBTITLE_LINES[1]}
           <br />
-          <span className="text-[#e2c9a0]/25">在關上牢門之前找到他</span>
+          <span className="text-[#e2c9a0]/25">{HOMEPAGE_SUBTITLE_LINES[2]}</span>
         </p>
 
         {/* 按鈕組 */}
