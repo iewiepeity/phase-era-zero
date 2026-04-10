@@ -42,7 +42,7 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [guestId, setGuestId] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,7 +106,7 @@ export default function ChatPage() {
             content,
           })),
           clue: CLUE,
-          conversationId: conversationId ?? undefined,
+          sessionId: sessionId ?? undefined,
           guestId,
         }),
       });
@@ -116,8 +116,8 @@ export default function ChatPage() {
       const data = await res.json();
 
       // 記住 conversationId，之後每輪對話都帶上
-      if (data.conversationId && !conversationId) {
-        setConversationId(data.conversationId);
+      if (data.sessionId && !sessionId) {
+        setSessionId(data.sessionId);
       }
 
       // 加入帶打字機效果的 NPC 訊息
@@ -140,7 +140,7 @@ export default function ChatPage() {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [input, loading, messages, conversationId, guestId]);
+  }, [input, loading, messages, sessionId, guestId]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -162,7 +162,7 @@ export default function ChatPage() {
         content: "坐啊，要吃什麼？今天的湯麵不錯。",
       },
     ]);
-    setConversationId(null);
+    setSessionId(null);
   }
 
   return (

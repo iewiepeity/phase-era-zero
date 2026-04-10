@@ -4,6 +4,9 @@ import { createServerSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+// ─────────────────────────────────────────────────────────────
+// System Prompt 組裝（Phase 0 版，之後由 build_npc_prompt() 取代）
+// ─────────────────────────────────────────────────────────────
 function buildChenJiePrompt(clue: string): string {
   return `你是陳姐。
 
@@ -42,86 +45,114 @@ type ChatMessage = {
   content: string;
 };
 
-async function saveMessagesToSupabase(
-  conversationId: string,
-  userMsg: string,
-  npcReply: string
-) {
-  if (!isSupabaseConfigured()) return;
-  try {
-    const db = createServerSupabase();
-    await db.from("messages").insert([
-      { conversation_id: conversationId, role: "user", content: userMsg },
-      { conversation_id: conversationId, role: "npc", content: npcReply },
-    ]);
-  } catch (err) {
-    // Supabase 儲存失敗不應中斷對話，只記錄 warning
-    console.warn("[chat] Supabase save failed:", err);
-  }
-}
+// ─────────────────────────────────────────────────────────────
+// Supabase 輔助函式
+// ─────────────────────────────────────────────────────────────
 
-async function ensureConversation(
-  guestId: string,
-  npcId: string
-): Promise<string | null> {
+/** 找到既有的 active session，或建立一個 Phase 0 用的佔位 session */
+async function ensureSession(guestId: string): Promise<string | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const db = createServerSupabase();
 
-    // 找或建立 game_session
-    let sessionId: string;
-    const { data: existingSession } = await db
+    // 用 player_name 當訪客識別鍵（Phase 0 暫代 user auth）
+    const { data: existing } = await db
       .from("game_sessions")
       .select("id")
-      .eq("guest_id", guestId)
+      .eq("player_name", guestId)
       .eq("status", "active")
+      .maybeSingle();
+
+    if (existing) return existing.id;
+
+    // 建立 Phase 0 佔位 session（killer_id / motive_direction 為必填欄位）
+    const { data: created, error } = await db
+      .from("game_sessions")
+      .insert({
+        player_name: guestId,
+        killer_id: "phase0_placeholder",   // Phase 3 隨機抽選後會覆蓋
+        motive_direction: "A",             // 預設路線 A
+        status: "active",
+      })
+      .select("id")
       .single();
 
-    if (existingSession) {
-      sessionId = existingSession.id;
-    } else {
-      const { data: newSession, error } = await db
-        .from("game_sessions")
-        .insert({ guest_id: guestId })
-        .select("id")
-        .single();
-      if (error || !newSession) return null;
-      sessionId = newSession.id;
+    if (error) {
+      console.warn("[chat] create session failed:", error.message);
+      return null;
     }
-
-    // 找或建立 conversation
-    const { data: existingConv } = await db
-      .from("conversations")
-      .select("id")
-      .eq("game_session_id", sessionId)
-      .eq("npc_id", npcId)
-      .single();
-
-    if (existingConv) return existingConv.id;
-
-    const { data: newConv, error } = await db
-      .from("conversations")
-      .insert({ game_session_id: sessionId, npc_id: npcId })
-      .select("id")
-      .single();
-
-    return error ? null : newConv?.id ?? null;
-  } catch {
+    return created.id;
+  } catch (e) {
+    console.warn("[chat] ensureSession error:", e);
     return null;
   }
 }
 
+/** 儲存一對訊息（user + npc）到 chat_messages */
+async function saveMessages(
+  sessionId: string,
+  npcId: string,
+  userContent: string,
+  npcContent: string
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db.from("chat_messages").insert([
+      { session_id: sessionId, npc_id: npcId, role: "user",  content: userContent },
+      { session_id: sessionId, npc_id: npcId, role: "assistant", content: npcContent },
+    ]);
+  } catch (e) {
+    // 儲存失敗不中斷對話，只 warn
+    console.warn("[chat] saveMessages failed:", e);
+  }
+}
+
+/** 更新 npc_states（conversation_count++） */
+async function updateNpcState(sessionId: string, npcId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+
+    // upsert：不存在就建立，存在就 count++
+    const { data: existing } = await db
+      .from("npc_states")
+      .select("id, conversation_count")
+      .eq("session_id", sessionId)
+      .eq("npc_id", npcId)
+      .maybeSingle();
+
+    if (existing) {
+      await db
+        .from("npc_states")
+        .update({ conversation_count: existing.conversation_count + 1 })
+        .eq("id", existing.id);
+    } else {
+      await db
+        .from("npc_states")
+        .insert({ session_id: sessionId, npc_id: npcId, conversation_count: 1 });
+    }
+  } catch (e) {
+    console.warn("[chat] updateNpcState failed:", e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/chat
+// ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const { messages, clue, conversationId, guestId } = await req.json() as {
+    const { messages, clue, sessionId, guestId } = (await req.json()) as {
       messages: ChatMessage[];
       clue: string;
-      conversationId?: string;
+      sessionId?: string;
       guestId?: string;
     };
 
+    // 1. 組裝 System Prompt
     const systemPrompt = buildChenJiePrompt(clue || "（線索尚未設定）");
 
+    // 2. 呼叫 Gemini
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemPrompt,
@@ -137,16 +168,18 @@ export async function POST(req: NextRequest) {
     const result = await chat.sendMessage(lastMessage.content);
     const reply = result.response.text();
 
-    // 儲存到 Supabase（非同步，不阻塞回應）
-    const resolvedConvId =
-      conversationId ??
-      (guestId ? await ensureConversation(guestId, "chen_jie") : null);
+    // 3. 持久化到 Supabase（非同步，不阻塞回應）
+    const resolvedSessionId =
+      sessionId ??
+      (guestId ? await ensureSession(guestId) : null);
 
-    if (resolvedConvId) {
-      saveMessagesToSupabase(resolvedConvId, lastMessage.content, reply);
+    if (resolvedSessionId) {
+      // fire-and-forget
+      saveMessages(resolvedSessionId, "chen_jie", lastMessage.content, reply);
+      updateNpcState(resolvedSessionId, "chen_jie");
     }
 
-    return NextResponse.json({ reply, conversationId: resolvedConvId });
+    return NextResponse.json({ reply, sessionId: resolvedSessionId });
   } catch (err) {
     console.error("[/api/chat]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
