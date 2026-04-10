@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createServerSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -41,11 +42,82 @@ type ChatMessage = {
   content: string;
 };
 
+async function saveMessagesToSupabase(
+  conversationId: string,
+  userMsg: string,
+  npcReply: string
+) {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db.from("messages").insert([
+      { conversation_id: conversationId, role: "user", content: userMsg },
+      { conversation_id: conversationId, role: "npc", content: npcReply },
+    ]);
+  } catch (err) {
+    // Supabase 儲存失敗不應中斷對話，只記錄 warning
+    console.warn("[chat] Supabase save failed:", err);
+  }
+}
+
+async function ensureConversation(
+  guestId: string,
+  npcId: string
+): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const db = createServerSupabase();
+
+    // 找或建立 game_session
+    let sessionId: string;
+    const { data: existingSession } = await db
+      .from("game_sessions")
+      .select("id")
+      .eq("guest_id", guestId)
+      .eq("status", "active")
+      .single();
+
+    if (existingSession) {
+      sessionId = existingSession.id;
+    } else {
+      const { data: newSession, error } = await db
+        .from("game_sessions")
+        .insert({ guest_id: guestId })
+        .select("id")
+        .single();
+      if (error || !newSession) return null;
+      sessionId = newSession.id;
+    }
+
+    // 找或建立 conversation
+    const { data: existingConv } = await db
+      .from("conversations")
+      .select("id")
+      .eq("game_session_id", sessionId)
+      .eq("npc_id", npcId)
+      .single();
+
+    if (existingConv) return existingConv.id;
+
+    const { data: newConv, error } = await db
+      .from("conversations")
+      .insert({ game_session_id: sessionId, npc_id: npcId })
+      .select("id")
+      .single();
+
+    return error ? null : newConv?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages, clue } = await req.json() as {
+    const { messages, clue, conversationId, guestId } = await req.json() as {
       messages: ChatMessage[];
       clue: string;
+      conversationId?: string;
+      guestId?: string;
     };
 
     const systemPrompt = buildChenJiePrompt(clue || "（線索尚未設定）");
@@ -65,7 +137,16 @@ export async function POST(req: NextRequest) {
     const result = await chat.sendMessage(lastMessage.content);
     const reply = result.response.text();
 
-    return NextResponse.json({ reply });
+    // 儲存到 Supabase（非同步，不阻塞回應）
+    const resolvedConvId =
+      conversationId ??
+      (guestId ? await ensureConversation(guestId, "chen_jie") : null);
+
+    if (resolvedConvId) {
+      saveMessagesToSupabase(resolvedConvId, lastMessage.content, reply);
+    }
+
+    return NextResponse.json({ reply, conversationId: resolvedConvId });
   } catch (err) {
     console.error("[/api/chat]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
