@@ -10,6 +10,8 @@ import {
   type NpcState,
 } from "@/lib/npc-engine";
 import { getNpc } from "@/lib/npc-registry";
+import { buildChenJieClues } from "@/lib/random-engine";
+import type { KillerId, MotiveDirection, CaseConfig } from "@/lib/case-config";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -109,6 +111,29 @@ async function updateNpcStateInDb(
   } catch (e) { console.warn("[chat] updateNpcState:", e); }
 }
 
+async function getCaseConfig(sessionId: string): Promise<CaseConfig | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const db = createServerSupabase();
+    const { data } = await db
+      .from("game_sessions")
+      .select("killer_id, motive_direction, created_at")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (!data || !data.killer_id || !data.motive_direction) return null;
+    // Reconstruct a minimal CaseConfig (truthString not needed for clue building)
+    return {
+      killerId: data.killer_id as KillerId,
+      motiveDirection: data.motive_direction as MotiveDirection,
+      relationship: "R1",         // placeholder — not used by buildChenJieClues
+      elements: ["D1"],           // placeholder
+      truthString: "",             // not exposed to client
+      seed: 0,
+      generatedAt: data.created_at ?? new Date().toISOString(),
+    } satisfies CaseConfig;
+  } catch { return null; }
+}
+
 async function saveMessages(
   sessionId: string,
   npcId: string,
@@ -194,12 +219,17 @@ export async function POST(req: NextRequest) {
     const npc = getNpc(npcId);
     if (!npc) return NextResponse.json({ error: `Unknown NPC: ${npcId}` }, { status: 400 });
 
+    // 如果有 session，從 DB 讀取案件配置以注入動態線索
+    const caseConfig = resolvedSessionId ? await getCaseConfig(resolvedSessionId) : null;
+    const dynamicClues = caseConfig ? buildChenJieClues(caseConfig) : undefined;
+
     const systemPrompt = buildNpcPrompt({
       npcId,
       currentAct,
       playerRoute,
       playerStats: DEFAULT_PLAYER_STATS,
       npcState,
+      availableClues: dynamicClues,
     });
 
     // 4. 呼叫 Gemini
