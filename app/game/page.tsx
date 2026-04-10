@@ -1,53 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-function getGuestId(): string {
-  const key = "pez_guest_id";
-  let id = localStorage.getItem(key);
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); }
-  return id;
-}
+import { useGameSession } from "@/hooks/useGameSession";
 
 export default function GameLobbyPage() {
-  const router = useRouter();
-  const [starting,         setStarting]         = useState(false);
-  const [error,            setError]            = useState("");
-  const [existingSession,  setExistingSession]  = useState<string | null>(null);
-  const [mounted,          setMounted]          = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const sid = localStorage.getItem("pez_game_session_id");
-    if (sid) setExistingSession(sid);
-  }, []);
-
-  async function startNewGame() {
-    setStarting(true);
-    setError("");
-    try {
-      const guestId = getGuestId();
-      const res  = await fetch("/api/game/new", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.sessionId) { setError("無法開始新遊戲，請稍後再試。"); return; }
-      if (existingSession) {
-        localStorage.removeItem(`pez_result_${existingSession}`);
-        localStorage.removeItem(`pez_seen_intro_${existingSession}`);
-      }
-      localStorage.setItem("pez_game_session_id", data.sessionId);
-      router.push(`/game/${data.sessionId}`);
-    } catch {
-      setError("連線失敗，請確認網路後重試。");
-    } finally {
-      setStarting(false);
-    }
-  }
+  const { starting, error, existingSession, mounted, startNewGame } = useGameSession();
 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden bg-[#0d1117]">
@@ -56,7 +13,10 @@ export default function GameLobbyPage() {
       <div className="absolute inset-0 bg-grid-static opacity-50" aria-hidden="true" />
 
       {/* 頂部細線 */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#ff3864]/30 to-transparent" aria-hidden="true" />
+      <div
+        className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#ff3864]/30 to-transparent"
+        aria-hidden="true"
+      />
 
       {/* 內容 */}
       <div
@@ -126,7 +86,7 @@ export default function GameLobbyPage() {
         {/* 底部 */}
         <div className="mt-10 text-center">
           <p className="font-mono-sys text-[10px] text-[#e2c9a0]/12 tracking-[0.3em]">
-            PHASE 4 VERTICAL SLICE
+            PHASE 5 COMPLETE
           </p>
         </div>
       </div>

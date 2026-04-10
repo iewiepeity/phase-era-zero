@@ -4,15 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { SUSPECTS, MOTIVES } from "@/lib/case-config";
+import { STORAGE_KEYS } from "@/lib/constants";
+import { ScoreRing } from "@/components/ui/ScoreRing";
 import type { KillerId, MotiveDirection } from "@/lib/case-config";
 
 interface AccuseResult {
-  correct: boolean;
-  killerCorrect: boolean;
-  motiveCorrect: boolean;
-  score: number;
-  result: "win" | "lose";
-  answer: { killerId: KillerId; motiveDirection: MotiveDirection };
+  correct:        boolean;
+  killerCorrect:  boolean;
+  motiveCorrect:  boolean;
+  score:          number;
+  result:         "win" | "lose";
+  answer:         { killerId: KillerId; motiveDirection: MotiveDirection };
 }
 
 // ── 風味文字 ──────────────────────────────────────────────────
@@ -36,45 +38,6 @@ function pickText(arr: string[], seed: number): string {
   return arr[seed % arr.length];
 }
 
-// ── SVG 分數環 ────────────────────────────────────────────────
-function ScoreRing({ score, animate }: { score: number; animate: boolean }) {
-  const r    = 38;
-  const circ = 2 * Math.PI * r;   // ≈ 238.76
-  const dash = animate ? (score / 100) * circ : 0;
-  const isGood = score >= 60;
-
-  return (
-    <div className="relative w-28 h-28 flex items-center justify-center">
-      <svg
-        className="absolute inset-0 -rotate-90"
-        width="112" height="112"
-        viewBox="0 0 112 112"
-      >
-        {/* 底圈 */}
-        <circle cx="56" cy="56" r={r} fill="none" stroke="rgba(226,201,160,0.07)" strokeWidth="3" />
-        {/* 進度圈 */}
-        <circle
-          cx="56" cy="56" r={r}
-          fill="none"
-          stroke={isGood ? "#ff3864" : "rgba(226,201,160,0.3)"}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${circ}`}
-          style={{
-            transition: "stroke-dasharray 1.6s cubic-bezier(0.16,1,0.3,1)",
-            filter:     isGood ? "drop-shadow(0 0 6px rgba(255,56,100,0.5))" : undefined,
-          }}
-        />
-      </svg>
-      {/* 分數數字 */}
-      <div className="text-center">
-        <span className="font-mono-sys text-2xl text-[#e2c9a0]">{score}</span>
-        <p className="font-mono-sys text-[9px] text-[#e2c9a0]/30 tracking-widest">PTS</p>
-      </div>
-    </div>
-  );
-}
-
 // ── 粒子閃光（win 效果）──────────────────────────────────────
 function WinSparkles() {
   return (
@@ -84,10 +47,10 @@ function WinSparkles() {
           key={i}
           className="absolute w-1 h-1 rounded-full bg-[#ff3864] animate-neon-pulse"
           style={{
-            top:              `${10 + i * 10}%`,
-            left:             `${5 + (i % 3) * 35}%`,
-            opacity:          0.4 + (i % 3) * 0.15,
-            animationDelay:   `${i * 0.3}s`,
+            top:               `${10 + i * 10}%`,
+            left:              `${5 + (i % 3) * 35}%`,
+            opacity:           0.4 + (i % 3) * 0.15,
+            animationDelay:    `${i * 0.3}s`,
             animationDuration: `${1.5 + i * 0.2}s`,
           }}
         />
@@ -107,24 +70,23 @@ export default function ResultPage() {
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    const raw = localStorage.getItem(`pez_result_${sessionId}`);
+    const raw = localStorage.getItem(STORAGE_KEYS.RESULT(sessionId));
     if (!raw) return;
     try {
       const data = JSON.parse(raw) as AccuseResult;
       setResult(data);
 
-      // 分段揭曉
-      const t1 = setTimeout(() => setPhaseIdx(1), 300);
-      const t2 = setTimeout(() => setPhaseIdx(2), 1000);
-      const t3 = setTimeout(() => setRingAnimate(true), 1200);
-      const t4 = setTimeout(() => setPhaseIdx(3), 2200);
+      const t1 = setTimeout(() => setPhaseIdx(1),         300);
+      const t2 = setTimeout(() => setPhaseIdx(2),        1000);
+      const t3 = setTimeout(() => setRingAnimate(true),  1200);
+      const t4 = setTimeout(() => setPhaseIdx(3),        2200);
       timerRef.current = [t1, t2, t3, t4];
     } catch { /* ignore */ }
 
     return () => timerRef.current.forEach(clearTimeout);
   }, [sessionId]);
 
-  // ── 無資料 ─────────────────────────────────────────────────
+  // ── 無資料 ────────────────────────────────────────────────
   if (!result) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-[#0d1117]">
@@ -147,9 +109,8 @@ export default function ResultPage() {
   const { correct, killerCorrect, motiveCorrect, score, answer } = result;
   const correctKiller = SUSPECTS[answer.killerId];
   const correctMotive = MOTIVES[answer.motiveDirection];
-
-  const flavorSeed = answer.killerId.charCodeAt(0);
-  const flavorText = correct
+  const flavorSeed    = answer.killerId.charCodeAt(0);
+  const flavorText    = correct
     ? pickText(WIN_TEXTS, flavorSeed)
     : !killerCorrect
     ? pickText(LOSE_KILLER_TEXTS, flavorSeed)
@@ -178,7 +139,7 @@ export default function ResultPage() {
         />
       )}
 
-      {/* ── 內容 ─────────────────────────────────────────── */}
+      {/* ── 內容 ─────────────────────────────────────── */}
       <div className="relative z-10 flex-1 flex flex-col max-w-xl mx-auto w-full">
 
         {/* 標題列 */}
@@ -195,7 +156,7 @@ export default function ResultPage() {
 
         <div className="flex-1 flex flex-col items-center px-6 py-8 gap-7">
 
-          {/* ─ 結果標題 ─ */}
+          {/* 結果標題 */}
           <div
             className="text-center space-y-1 transition-all duration-700"
             style={{ opacity: phaseIdx >= 1 ? 1 : 0, transform: phaseIdx >= 1 ? "translateY(0)" : "translateY(20px)" }}
@@ -220,7 +181,7 @@ export default function ResultPage() {
             )}
           </div>
 
-          {/* ─ 分數環 ─ */}
+          {/* 分數環 */}
           <div
             className="transition-all duration-700"
             style={{ opacity: phaseIdx >= 2 ? 1 : 0, transform: phaseIdx >= 2 ? "scale(1)" : "scale(0.7)" }}
@@ -228,7 +189,7 @@ export default function ResultPage() {
             <ScoreRing score={score} animate={ringAnimate} />
           </div>
 
-          {/* ─ 其餘內容（分段顯示）─ */}
+          {/* 其餘內容（分段顯示）*/}
           <div
             className="w-full space-y-5 transition-all duration-700"
             style={{ opacity: phaseIdx >= 3 ? 1 : 0, transform: phaseIdx >= 3 ? "translateY(0)" : "translateY(16px)" }}
@@ -314,8 +275,8 @@ export default function ResultPage() {
             {/* 分數明細 */}
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "兇手",   pts: killerCorrect ? 60 : 0,  total: 60 },
-                { label: "動機",   pts: motiveCorrect ? 40 : 0,  total: 40 },
+                { label: "兇手", pts: killerCorrect ? 60 : 0, total: 60 },
+                { label: "動機", pts: motiveCorrect ? 40 : 0, total: 40 },
               ].map((item) => (
                 <div
                   key={item.label}
