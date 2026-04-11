@@ -57,6 +57,7 @@ import {
 } from "@/lib/npc-engine";
 import { getNpc } from "@/lib/npc-registry";
 import { buildNpcClues } from "@/lib/random-engine";
+import { isRandomNpc, buildRandomNpcPrompt } from "@/lib/services/random-npc";
 import { getScene } from "@/lib/scene-config";
 import { checkAndUnlockAchievements } from "@/lib/services/achievements";
 import { checkActProgression } from "@/lib/services/act-progression";
@@ -123,6 +124,24 @@ export async function POST(req: NextRequest) {
           headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" },
         },
       );
+    }
+
+    // ── 隨機路人 NPC 快速路徑（無 DB，無信任/線索/成就邏輯）────
+    if (isRandomNpc(npcId)) {
+      const systemPrompt = buildRandomNpcPrompt(npcId, {
+        sceneId:      currentSceneId ?? "",
+        sessionId:    sessionId ?? guestId ?? "guest",
+        visitedCount: visitedScenes.length,
+        clueCount:    0,   // 路人不需要精確線索數，用 visitedCount 判斷進度
+        talkedNpcs:   [],
+      });
+
+      // 只保留最近 6 則對話作為歷史（節省 token）
+      const trimmedHistory = messages.slice(-7, -1);
+      const lastMessage    = messages[messages.length - 1];
+      const reply          = await callGeminiChat(systemPrompt, trimmedHistory, lastMessage.content);
+
+      return NextResponse.json({ reply, sessionId: sessionId ?? null });
     }
 
     // 1. 確保有 session

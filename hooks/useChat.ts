@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getNpc } from "@/lib/npc-registry";
 import { getNpcGreeting } from "@/lib/content/narrative";
+import { isRandomNpc, getRandomNpcGreeting } from "@/lib/services/random-npc";
 import { NPC_TYPING_MS, STORAGE_KEYS } from "@/lib/constants";
 import { consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
 import type { UiMessage, NpcStateUI, ChatErrorKind } from "@/lib/types";
@@ -88,11 +89,19 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
   }
 
   function getGreeting(): string {
+    if (isRandomNpc(npcId)) return getRandomNpcGreeting(npcId);
     return getNpcGreeting(npcId);
   }
 
   // ── 載入歷史 ───────────────────────────────────────────────
   async function loadHistory(sid: string) {
+    // 隨機路人 NPC：不讀 DB，直接顯示招呼語
+    if (isRandomNpc(npcId)) {
+      setMessages([makeNpcMsg(getGreeting(), false)]);
+      setLoadState("ready");
+      return;
+    }
+
     setLoadState("loading");
     try {
       const res  = await fetch(`/api/chat?sessionId=${sid}&npcId=${npcId}`);

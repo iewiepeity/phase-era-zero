@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getScene } from "@/lib/scene-config";
@@ -11,6 +11,8 @@ import { SCENE_ATMOSPHERE } from "@/lib/content/narrative";
 import { SCENE_ACTIONS } from "@/lib/content/action-options";
 import { ActionPanel } from "@/components/game/ActionPanel";
 import { TutorialOverlay } from "@/components/game/TutorialOverlay";
+import { getRandomNpcsForScene } from "@/lib/services/random-npc";
+import type { RandomNpcTemplate } from "@/lib/content/random-npcs";
 
 // ── Typewriter hook ────────────────────────────────────────────
 
@@ -69,9 +71,10 @@ export default function ScenePage() {
   const sceneId   = params.sceneId   as string;
   const router    = useRouter();
 
-  const scene   = getScene(sceneId);
-  const items   = getSceneItems(sceneId);
-  const palette = SCENE_PALETTE[sceneId] ?? DEFAULT_SCENE_PALETTE;
+  const scene      = getScene(sceneId);
+  const items      = getSceneItems(sceneId);
+  const palette    = SCENE_PALETTE[sceneId] ?? DEFAULT_SCENE_PALETTE;
+  const randomNpcs = useMemo(() => getRandomNpcsForScene(sceneId, sessionId), [sceneId, sessionId]);
 
   // State
   const [interactedItems, setInteractedItems] = useState<Set<string>>(new Set());
@@ -451,6 +454,52 @@ export default function ScenePage() {
             );
           })}
         </div>
+
+        {/* Random NPC section — 路人 */}
+        {randomNpcs.length > 0 && (
+          <section className="mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="font-mono-sys text-[9px] tracking-[0.4em] uppercase text-[#e2c9a0]/20">
+                路人
+              </span>
+              <span className="flex-1 h-px bg-[#e2c9a0]/05" />
+              <span className="font-mono-sys text-[8px] text-[#e2c9a0]/15 tracking-widest">
+                PASSERSBY
+              </span>
+            </div>
+            <div className="space-y-2">
+              {randomNpcs.map((rNpc: RandomNpcTemplate) => (
+                <button
+                  key={rNpc.id}
+                  onClick={() => router.push(`/game/${sessionId}/chat/${rNpc.id}`)}
+                  className="w-full text-left px-4 py-3 rounded border transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center gap-3"
+                  style={{
+                    borderColor: "rgba(226,201,160,0.10)",
+                    background:  "rgba(13,17,23,0.6)",
+                  }}
+                >
+                  <span className="text-lg leading-none shrink-0 opacity-60">{rNpc.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p
+                        className="text-sm leading-snug truncate text-[#e2c9a0]/45"
+                        style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                      >
+                        {rNpc.name}
+                      </p>
+                    </div>
+                    <p className="font-mono-sys text-[9px] tracking-wide truncate mt-0.5 text-[#e2c9a0]/18">
+                      {rNpc.appearance}
+                    </p>
+                  </div>
+                  <span className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border shrink-0 tracking-wide border-[#e2c9a0]/10 text-[#e2c9a0]/25 bg-[#e2c9a0]/03">
+                    路人
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Deep investigation button */}
         {scene.npcs.length > 0 && (
