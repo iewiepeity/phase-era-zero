@@ -39,9 +39,7 @@ export default function GameHubPage() {
     visited.add(scene.id);
     localStorage.setItem(key, [...visited].join(","));
 
-    if (scene.npcs.length > 0) {
-      router.push(`/game/${sessionId}/chat/${scene.npcs[0].id}`);
-    }
+    router.push(`/game/${sessionId}/scene/${scene.id}`);
   }
 
   if (!showHub) return null;

@@ -42,7 +42,7 @@ export default function MapPage() {
     visited.add(sceneId);
     localStorage.setItem(key, [...visited].join(","));
 
-    router.push(`/game/${sessionId}/chat/${scene.npcs[0].id}`);
+    router.push(`/game/${sessionId}/scene/${sceneId}`);
   }
 
   return (

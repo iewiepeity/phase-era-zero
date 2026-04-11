@@ -7,6 +7,8 @@ import { NPC_COLORS, DEFAULT_NPC_COLOR } from "@/lib/constants";
 import { useChat } from "@/hooks/useChat";
 import { ChatBubble } from "@/components/game/ChatBubble";
 import { TrustBar } from "@/components/ui/TrustBar";
+import { NPC_CHAT_OPTIONS } from "@/lib/content/action-options";
+import { ActionPanel } from "@/components/game/ActionPanel";
 
 export default function GameChatPage() {
   const params    = useParams();
@@ -33,6 +35,16 @@ export default function GameChatPage() {
     getDisplayContent,
     isTypingAnything,
   } = useChat({ sessionId, npcId });
+
+  // Derive action options from trust level
+  const npcOptions = NPC_CHAT_OPTIONS[npcId];
+  const chatOptions = npcOptions
+    ? npcState.trustLevel >= 70
+      ? npcOptions.deep
+      : npcState.trustLevel >= 30
+      ? npcOptions.trusted
+      : npcOptions.initial
+    : [];
 
   return (
     <div className="flex flex-col h-screen max-w-2xl mx-auto bg-[#0d1117]">
@@ -127,6 +139,21 @@ export default function GameChatPage() {
 
         <div ref={bottomRef} />
       </div>
+
+      {/* ── 行動建議 ─────────────────────────────────────── */}
+      {chatOptions.length > 0 && (
+        <div className="shrink-0 px-4 pb-2 pt-1">
+          <ActionPanel
+            options={chatOptions}
+            accentColor={npcColor.dot}
+            onChat={(text) => {
+              setInput(text);
+              setTimeout(() => inputRef.current?.focus(), 50);
+            }}
+            label="問話建議"
+          />
+        </div>
+      )}
 
       {/* ── 輸入列 ──────────────────────────────────────── */}
       <div className="shrink-0 border-t border-[#e2c9a0]/6 px-4 pb-4 pt-3 flex gap-2">
