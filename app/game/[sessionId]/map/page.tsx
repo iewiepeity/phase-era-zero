@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { SCENES } from "@/lib/scene-config";
+import { SCENES, DISTRICT_AREAS, getScenesByArea } from "@/lib/scene-config";
+import type { Scene } from "@/lib/scene-config";
 import { STORAGE_KEYS, SCENE_PALETTE, DEFAULT_SCENE_PALETTE } from "@/lib/constants";
 
 const DANGER_LABELS: Record<string, string> = {
@@ -18,38 +19,46 @@ const DANGER_COLORS: Record<string, string> = {
   high:   "rgba(255,56,100,0.75)",
 };
 
+const AREA_ORDER: Scene["districtArea"][] = ["old_city", "central", "harbor", "academic"];
+
 export default function MapPage() {
   const params    = useParams();
   const sessionId = params.sessionId as string;
   const router    = useRouter();
 
-  const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
+  const [visitedIds,  setVisitedIds]  = useState<Set<string>>(new Set());
+  const [currentAct,  setCurrentAct]  = useState(1);
 
   useEffect(() => {
+    // Load visited scenes
     const key  = STORAGE_KEYS.VISITED_SCENES(sessionId);
     const raw  = localStorage.getItem(key) ?? "";
-    const ids  = new Set(raw.split(",").filter(Boolean));
-    setVisitedIds(ids);
+    setVisitedIds(new Set(raw.split(",").filter(Boolean)));
+
+    // Load act from session (approximation via localStorage)
+    const actKey = `pez_act_${sessionId}`;
+    const act    = parseInt(localStorage.getItem(actKey) ?? "1", 10);
+    setCurrentAct(isNaN(act) ? 1 : act);
   }, [sessionId]);
 
-  function handleEnterScene(sceneId: string) {
-    const scene = SCENES.find((s) => s.id === sceneId);
-    if (!scene || scene.npcs.length === 0) return;
+  function handleEnterScene(scene: Scene) {
+    if (scene.locked && (scene.requiredAct ?? 1) > currentAct) return;
 
-    // 標記為已訪問
     const key     = STORAGE_KEYS.VISITED_SCENES(sessionId);
     const visited = new Set((localStorage.getItem(key) ?? "").split(",").filter(Boolean));
-    visited.add(sceneId);
+    visited.add(scene.id);
     localStorage.setItem(key, [...visited].join(","));
 
-    router.push(`/game/${sessionId}/scene/${sceneId}`);
+    router.push(`/game/${sessionId}/scene/${scene.id}`);
   }
+
+  const scenesByArea = getScenesByArea();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0d1117]">
       <div className="fixed inset-0 bg-grid-static opacity-30 pointer-events-none" aria-hidden="true" />
 
-      <div className="relative z-10 flex-1 max-w-xl mx-auto w-full px-5 pt-10 pb-16">
+      <div className="relative z-10 flex-1 max-w-xl mx-auto w-full px-5 pt-10 pb-20">
 
         {/* 頂部導覽 */}
         <div className="flex items-center justify-between mb-8">
@@ -65,7 +74,7 @@ export default function MapPage() {
         </div>
 
         {/* 標題 */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1
             className="text-lg tracking-widest text-[#e2c9a0]/85"
             style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
@@ -80,8 +89,8 @@ export default function MapPage() {
           </p>
         </div>
 
-        {/* 探索進度條 */}
-        <div className="flex items-center gap-3 mb-8">
+        {/* 全域進度條 */}
+        <div className="flex items-center gap-3 mb-10">
           <div className="flex-1 h-px bg-[#e2c9a0]/08 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#5bb8ff]/40 rounded-full transition-all duration-700"
@@ -93,143 +102,198 @@ export default function MapPage() {
           </span>
         </div>
 
-        {/* 場景卡片 2×2 格線 */}
-        <div className="grid grid-cols-2 gap-3">
-          {SCENES.map((scene) => {
-            const visited = visitedIds.has(scene.id);
-            const palette = SCENE_PALETTE[scene.id] ?? DEFAULT_SCENE_PALETTE;
-            const danger  = scene.dangerLevel ?? "medium";
+        {/* 按區域分組的場景 */}
+        <div className="space-y-10">
+          {AREA_ORDER.map((areaId) => {
+            const area   = DISTRICT_AREAS[areaId];
+            const scenes = scenesByArea[areaId];
+            if (!scenes || scenes.length === 0) return null;
+
+            const areaVisited = scenes.filter((s) => visitedIds.has(s.id)).length;
 
             return (
-              <button
-                key={scene.id}
-                onClick={() => handleEnterScene(scene.id)}
-                className="text-left p-4 rounded border transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  borderColor: visited ? palette.borderHover : palette.border,
-                  background:  visited ? palette.glow : "rgba(13,17,23,0.8)",
-                  boxShadow:   visited
-                    ? `0 0 18px ${palette.glow}, inset 0 0 12px ${palette.glow}`
-                    : "none",
-                }}
-              >
-                {/* 場景名稱 + 探訪指示器 */}
-                <div className="flex items-start justify-between gap-1 mb-2">
-                  <p
-                    className="text-sm leading-tight"
-                    style={{
-                      fontFamily: "var(--font-noto-serif-tc), serif",
-                      color:      visited
-                        ? palette.accent
-                        : "rgba(226,201,160,0.65)",
-                    }}
-                  >
-                    {scene.name}
-                  </p>
-                  {visited && (
-                    <span style={{ color: palette.accent }} className="text-xs shrink-0">
-                      ◆
+              <section key={areaId}>
+                {/* 區域標題 */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="font-mono-sys text-[9px] tracking-[0.4em] uppercase"
+                      style={{ color: `${area.accentColor}80` }}
+                    >
+                      {area.sublabel}
                     </span>
-                  )}
-                </div>
-
-                {/* 區域 */}
-                <p
-                  className="font-mono-sys text-[8px] tracking-widest mb-3 truncate"
-                  style={{ color: "rgba(226,201,160,0.28)" }}
-                >
-                  {scene.district}
-                </p>
-
-                {/* NPC 數量 */}
-                <p
-                  className="font-mono-sys text-[8px] tracking-widest mb-3"
-                  style={{ color: "rgba(226,201,160,0.22)" }}
-                >
-                  {scene.npcs.length} 名目擊者
-                </p>
-
-                {/* 底部標籤列 */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* 危險等級 */}
+                    <span
+                      className="text-sm tracking-widest"
+                      style={{
+                        fontFamily: "var(--font-noto-serif-tc), serif",
+                        color:      `${area.accentColor}90`,
+                      }}
+                    >
+                      {area.label}
+                    </span>
+                  </div>
+                  <span className="flex-1 h-px" style={{ background: `${area.accentColor}18` }} />
                   <span
-                    className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
-                    style={{
-                      borderColor: `${DANGER_COLORS[danger]}40`,
-                      color:       DANGER_COLORS[danger],
-                      background:  `${DANGER_COLORS[danger]}10`,
-                    }}
+                    className="font-mono-sys text-[8px] shrink-0"
+                    style={{ color: `${area.accentColor}40` }}
                   >
-                    {DANGER_LABELS[danger]}
+                    {areaVisited}/{scenes.length}
                   </span>
-
-                  {/* 已訪問標籤 */}
-                  {visited ? (
-                    <span
-                      className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
-                      style={{
-                        borderColor: `${palette.accent}35`,
-                        color:       `${palette.accent}80`,
-                        background:  `${palette.accent}08`,
-                      }}
-                    >
-                      已探索
-                    </span>
-                  ) : (
-                    <span
-                      className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
-                      style={{
-                        borderColor: "rgba(226,201,160,0.10)",
-                        color:       "rgba(226,201,160,0.25)",
-                      }}
-                    >
-                      未探索
-                    </span>
-                  )}
                 </div>
-              </button>
+
+                {/* 場景卡片 2 欄 */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {scenes.map((scene) => {
+                    const visited = visitedIds.has(scene.id);
+                    const palette = SCENE_PALETTE[scene.id] ?? DEFAULT_SCENE_PALETTE;
+                    const danger  = scene.dangerLevel ?? "medium";
+                    const locked  = scene.locked && (scene.requiredAct ?? 1) > currentAct;
+
+                    return (
+                      <button
+                        key={scene.id}
+                        onClick={() => !locked && handleEnterScene(scene)}
+                        disabled={locked}
+                        className="text-left p-3.5 rounded border transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{
+                          borderColor: locked
+                            ? "rgba(226,201,160,0.08)"
+                            : visited
+                            ? palette.borderHover
+                            : palette.border,
+                          background: locked
+                            ? "rgba(13,17,23,0.4)"
+                            : visited
+                            ? palette.glow
+                            : "rgba(13,17,23,0.8)",
+                          boxShadow: visited && !locked
+                            ? `0 0 14px ${palette.glow}, inset 0 0 10px ${palette.glow}`
+                            : "none",
+                        }}
+                      >
+                        {/* 場景名稱 */}
+                        <div className="flex items-start justify-between gap-1 mb-1.5">
+                          <p
+                            className="text-[13px] leading-tight"
+                            style={{
+                              fontFamily: "var(--font-noto-serif-tc), serif",
+                              color: locked
+                                ? "rgba(226,201,160,0.28)"
+                                : visited
+                                ? palette.accent
+                                : "rgba(226,201,160,0.65)",
+                            }}
+                          >
+                            {scene.name}
+                          </p>
+                          {locked ? (
+                            <span className="text-[10px] shrink-0 opacity-40">🔒</span>
+                          ) : visited ? (
+                            <span style={{ color: palette.accent }} className="text-xs shrink-0">◆</span>
+                          ) : null}
+                        </div>
+
+                        {/* 簡短描述 */}
+                        <p
+                          className="text-[10px] leading-snug mb-2.5 line-clamp-2"
+                          style={{
+                            fontFamily: "var(--font-noto-serif-tc), serif",
+                            color:      locked
+                              ? "rgba(226,201,160,0.18)"
+                              : "rgba(226,201,160,0.35)",
+                          }}
+                        >
+                          {locked ? (scene.lockReason ?? "尚未解鎖") : scene.ambience}
+                        </p>
+
+                        {/* 底部標籤 */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* NPC 數量 */}
+                          <span
+                            className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
+                            style={{
+                              borderColor: locked
+                                ? "rgba(226,201,160,0.08)"
+                                : `${palette.accent}20`,
+                              color:       locked
+                                ? "rgba(226,201,160,0.20)"
+                                : `${palette.accent}55`,
+                            }}
+                          >
+                            {scene.npcs.length}人
+                          </span>
+
+                          {/* 危險等級 */}
+                          <span
+                            className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
+                            style={{
+                              borderColor: locked
+                                ? "rgba(226,201,160,0.08)"
+                                : `${DANGER_COLORS[danger]}35`,
+                              color:       locked
+                                ? "rgba(226,201,160,0.20)"
+                                : DANGER_COLORS[danger],
+                            }}
+                          >
+                            {DANGER_LABELS[danger]}
+                          </span>
+
+                          {/* 已訪問 / 未探索 */}
+                          {!locked && (
+                            visited ? (
+                              <span
+                                className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
+                                style={{
+                                  borderColor: `${palette.accent}30`,
+                                  color:       `${palette.accent}75`,
+                                  background:  `${palette.accent}08`,
+                                }}
+                              >
+                                已探索
+                              </span>
+                            ) : (
+                              <span
+                                className="font-mono-sys text-[8px] px-1.5 py-0.5 rounded-sm border tracking-wide"
+                                style={{
+                                  borderColor: "rgba(226,201,160,0.10)",
+                                  color:       "rgba(226,201,160,0.25)",
+                                }}
+                              >
+                                未探索
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             );
           })}
         </div>
 
-        {/* 場景氛圍提示 */}
-        <div className="mt-8 space-y-1">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="font-mono-sys text-[9px] text-[#e2c9a0]/20 tracking-[0.4em] uppercase">地點概覽</span>
-            <span className="flex-1 h-px bg-[#e2c9a0]/06" />
+        {/* 圖例 */}
+        <div className="mt-10 pt-6 border-t border-[#e2c9a0]/05">
+          <div className="flex flex-wrap gap-4">
+            {AREA_ORDER.map((areaId) => {
+              const area = DISTRICT_AREAS[areaId];
+              return (
+                <div key={areaId} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: `${area.accentColor}60` }}
+                  />
+                  <span
+                    className="font-mono-sys text-[8px] tracking-widest"
+                    style={{ color: `${area.accentColor}55` }}
+                  >
+                    {area.sublabel}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          {SCENES.map((scene) => {
-            const visited = visitedIds.has(scene.id);
-            return (
-              <div
-                key={scene.id}
-                className="flex items-baseline gap-2 py-1.5 border-b"
-                style={{ borderColor: "rgba(226,201,160,0.05)" }}
-              >
-                <span
-                  className="font-mono-sys text-[9px] shrink-0 w-20 tracking-wide"
-                  style={{
-                    color: visited
-                      ? "rgba(226,201,160,0.55)"
-                      : "rgba(226,201,160,0.22)",
-                  }}
-                >
-                  {scene.name}
-                </span>
-                <span
-                  className="text-[10px] leading-relaxed flex-1"
-                  style={{
-                    fontFamily: "var(--font-noto-serif-tc), serif",
-                    color:      visited
-                      ? "rgba(226,201,160,0.38)"
-                      : "rgba(226,201,160,0.15)",
-                  }}
-                >
-                  {scene.ambience}
-                </span>
-              </div>
-            );
-          })}
         </div>
 
       </div>

@@ -132,6 +132,48 @@ export const SCENE_PALETTE: Record<string, {
     borderHover: "rgba(255,56,100,0.35)",
     badge:       "rgba(255,56,100,0.12)",
   },
+  bai_qiu_pharmacy: {
+    accent:      "#f0abfc",
+    glow:        "rgba(240,171,252,0.08)",
+    border:      "rgba(240,171,252,0.14)",
+    borderHover: "rgba(240,171,252,0.35)",
+    badge:       "rgba(240,171,252,0.12)",
+  },
+  medical_center: {
+    accent:      "#c084fc",
+    glow:        "rgba(192,132,252,0.08)",
+    border:      "rgba(192,132,252,0.14)",
+    borderHover: "rgba(192,132,252,0.35)",
+    badge:       "rgba(192,132,252,0.12)",
+  },
+  lin_lab: {
+    accent:      "#fb923c",
+    glow:        "rgba(251,146,60,0.08)",
+    border:      "rgba(251,146,60,0.14)",
+    borderHover: "rgba(251,146,60,0.35)",
+    badge:       "rgba(251,146,60,0.12)",
+  },
+  btma_lobby: {
+    accent:      "#4ade80",
+    glow:        "rgba(74,222,128,0.07)",
+    border:      "rgba(74,222,128,0.12)",
+    borderHover: "rgba(74,222,128,0.30)",
+    badge:       "rgba(74,222,128,0.10)",
+  },
+  abandoned_warehouse: {
+    accent:      "#06b6d4",
+    glow:        "rgba(6,182,212,0.08)",
+    border:      "rgba(6,182,212,0.12)",
+    borderHover: "rgba(6,182,212,0.30)",
+    badge:       "rgba(6,182,212,0.10)",
+  },
+  zhengbo_office: {
+    accent:      "#60a5fa",
+    glow:        "rgba(96,165,250,0.08)",
+    border:      "rgba(96,165,250,0.14)",
+    borderHover: "rgba(96,165,250,0.35)",
+    badge:       "rgba(96,165,250,0.12)",
+  },
 };
 
 /** 找不到指定場景時的預設配色 */

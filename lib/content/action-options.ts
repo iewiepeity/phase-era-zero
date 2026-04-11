@@ -155,6 +155,198 @@ export const SCENE_ACTIONS: Record<string, ActionOption[]> = {
       type:         "leave",
     },
   ],
+
+  bai_qiu_pharmacy: [
+    {
+      id:           "bqp_talk_baiqiu",
+      label:        "問白秋那些顧客",
+      type:         "navigate",
+      npcId:        "baiqiu",
+    },
+    {
+      id:           "bqp_prescription",
+      label:        "那本處方記錄——有沒有規律",
+      type:         "explore",
+      targetItemId: "prescription_log",
+    },
+    {
+      id:           "bqp_shipment",
+      label:        "壓在日曆底下的那張紙",
+      type:         "explore",
+      targetItemId: "suppressed_shipment",
+    },
+    {
+      id:           "bqp_camera",
+      label:        "監視器——線怎麼斷的",
+      type:         "explore",
+      targetItemId: "security_camera",
+    },
+    {
+      id:           "bqp_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
+
+  medical_center: [
+    {
+      id:           "mc_talk_yu",
+      label:        "找余霜問林淵的事",
+      type:         "navigate",
+      npcId:        "yushuang",
+    },
+    {
+      id:           "mc_room",
+      label:        "310號病房——那間空著的",
+      type:         "explore",
+      targetItemId: "lin_yuan_room",
+    },
+    {
+      id:           "mc_files",
+      label:        "病歷裡那十四行被蓋住的",
+      type:         "explore",
+      targetItemId: "medical_files",
+    },
+    {
+      id:           "mc_kit",
+      label:        "走廊那個測試套組",
+      type:         "explore",
+      targetItemId: "phase2_test_kit",
+    },
+    {
+      id:           "mc_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
+
+  lin_lab: [
+    {
+      id:           "ll_talk_lin",
+      label:        "林知夏在記錄什麼",
+      type:         "navigate",
+      npcId:        "linzhixia",
+    },
+    {
+      id:           "ll_whiteboard",
+      label:        "白板上那條時間軸",
+      type:         "explore",
+      targetItemId: "research_whiteboard",
+    },
+    {
+      id:           "ll_samples",
+      label:        "那十四個樣本管",
+      type:         "explore",
+      targetItemId: "tissue_samples",
+    },
+    {
+      id:           "ll_journal",
+      label:        "那本寫著「勿處理」的日誌",
+      type:         "explore",
+      targetItemId: "phase2_journal",
+    },
+    {
+      id:           "ll_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
+
+  btma_lobby: [
+    {
+      id:           "bl_talk_it",
+      label:        "謝先生——他在這裡等什麼",
+      type:         "navigate",
+      npcId:        "it",
+    },
+    {
+      id:           "bl_signin",
+      label:        "訪客簽到簿裡那個名字",
+      type:         "explore",
+      targetItemId: "signin_log",
+    },
+    {
+      id:           "bl_badge",
+      label:        "椅縫裡那張通行證",
+      type:         "explore",
+      targetItemId: "restricted_badge",
+    },
+    {
+      id:           "bl_memo",
+      label:        "廢紙桶旁的那張清單",
+      type:         "explore",
+      targetItemId: "internal_memo",
+    },
+    {
+      id:           "bl_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
+
+  abandoned_warehouse: [
+    {
+      id:           "aw_talk_zhuang",
+      label:        "莊河說他先到了",
+      type:         "navigate",
+      npcId:        "zhuanghe",
+    },
+    {
+      id:           "aw_hidden",
+      label:        "貨架後面那道門",
+      type:         "explore",
+      targetItemId: "hidden_room",
+    },
+    {
+      id:           "aw_manifest",
+      label:        "牆上那份貨物清單",
+      type:         "explore",
+      targetItemId: "shipping_manifest",
+    },
+    {
+      id:           "aw_graffiti",
+      label:        "地板邊那幾個字",
+      type:         "explore",
+      targetItemId: "coded_graffiti",
+    },
+    {
+      id:           "aw_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
+
+  zhengbo_office: [
+    {
+      id:           "zo_talk_zhengbo",
+      label:        "鄭博，他知道得比他說的多",
+      type:         "navigate",
+      npcId:        "zhengbo",
+    },
+    {
+      id:           "zo_wall",
+      label:        "那面牆——整個案子都在上面",
+      type:         "explore",
+      targetItemId: "case_files_wall",
+    },
+    {
+      id:           "zo_financial",
+      label:        "受害者財務記錄裡的規律",
+      type:         "explore",
+      targetItemId: "victim_financial_records",
+    },
+    {
+      id:           "zo_insurance",
+      label:        "那個受益人的名字",
+      type:         "explore",
+      targetItemId: "insurance_pattern",
+    },
+    {
+      id:           "zo_leave",
+      label:        "先離開",
+      type:         "leave",
+    },
+  ],
 };
 
 // ── NPC 對話建議 ───────────────────────────────────────────────
