@@ -406,6 +406,12 @@ export default function ResultPage() {
                 重新開局
               </Link>
               <Link
+                href={`/game/${sessionId}/share`}
+                className="w-full py-3 border border-[#5bb8ff]/20 text-[#5bb8ff]/50 text-sm tracking-[0.2em] hover:border-[#5bb8ff]/40 hover:text-[#5bb8ff]/80 transition-all duration-300 rounded text-center"
+              >
+                分享成績
+              </Link>
+              <Link
                 href={`/game/${sessionId}`}
                 className="w-full py-3 border border-[#e2c9a0]/10 text-[#e2c9a0]/35 text-sm tracking-[0.2em] hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/60 transition-all duration-300 rounded text-center"
               >

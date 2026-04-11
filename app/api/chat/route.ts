@@ -1,4 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// ── Rate Limiting（記憶體 Map，每 session 每分鐘最多 20 則）──────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(sessionId: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const window = 60_000; // 1 分鐘
+  const maxRequests = 20;
+
+  const entry = rateLimitMap.get(sessionId);
+  if (!entry || now >= entry.resetAt) {
+    rateLimitMap.set(sessionId, { count: 1, resetAt: now + window });
+    return { allowed: true };
+  }
+  if (entry.count >= maxRequests) {
+    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  entry.count++;
+  return { allowed: true };
+}
+
+// 定期清理過期記錄（防止記憶體洩漏）
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now >= entry.resetAt) rateLimitMap.delete(key);
+  }
+}, 5 * 60_000);
 import {
   ensureSession,
   getNpcStateFromDb,
@@ -58,6 +86,7 @@ export async function POST(req: NextRequest) {
       messages,
       sessionId,
       guestId,
+
       npcId,
       currentAct   = 1,
       playerRoute  = "A",
@@ -80,6 +109,16 @@ export async function POST(req: NextRequest) {
 
     if (!npcId) {
       return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：npcId" }, { status: 400 });
+    }
+
+    // Rate limit 檢查（以 sessionId 或 guestId 為 key）
+    const rateLimitKey = sessionId ?? guestId ?? "anonymous";
+    const { allowed, retryAfter } = checkRateLimit(rateLimitKey);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", message: `對話頻率超過限制，請 ${retryAfter} 秒後再試。` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
     }
 
     // 1. 確保有 session

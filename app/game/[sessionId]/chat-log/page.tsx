@@ -57,6 +57,39 @@ export default function ChatLogPage() {
     ? groups.filter((g) => g.npcId === activeNpc)
     : groups;
 
+  function exportAsText() {
+    const lines: string[] = [
+      "═══════════════════════════════════════",
+      "  相變世紀：零  對話回顧",
+      `  Session: ${sessionId}`,
+      `  匯出時間: ${new Date().toLocaleString("zh-TW")}`,
+      "═══════════════════════════════════════",
+      "",
+    ];
+
+    for (const g of groups) {
+      const npcName = getNpc(g.npcId)?.name ?? g.npcId;
+      lines.push(`── ${npcName} ──────────────────────────`);
+      for (const msg of g.messages) {
+        const role = msg.role === "user" ? "玩家" : npcName;
+        const time = formatTime(msg.created_at);
+        lines.push(`[${time}] ${role}：`);
+        lines.push(msg.content);
+        lines.push("");
+      }
+      lines.push("");
+    }
+
+    const content = lines.join("\n");
+    const blob    = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement("a");
+    a.href        = url;
+    a.download    = `phase-century-zero-chatlog-${sessionId.slice(0, 8)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-[#0d1117]">
       <div className="fixed inset-0 bg-grid-static opacity-20 pointer-events-none" aria-hidden="true" />
@@ -73,7 +106,13 @@ export default function ChatLogPage() {
           <p className="font-mono-sys text-[10px] text-[#5bb8ff]/40 tracking-[0.4em] uppercase">
             對話紀錄
           </p>
-          <div className="w-14" />
+          <button
+            onClick={exportAsText}
+            disabled={groups.length === 0}
+            className="font-mono-sys text-[9px] tracking-widest text-[#e2c9a0]/30 hover:text-[#e2c9a0]/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors px-2 py-1 border border-[#e2c9a0]/10 hover:border-[#e2c9a0]/25 rounded"
+          >
+            匯出 .txt
+          </button>
         </header>
 
         {/* 搜尋列 */}
