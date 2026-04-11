@@ -148,6 +148,8 @@ export async function POST(req: NextRequest) {
       playerContext,
       difficulty,
       playerIdentity:      playerIdentity as "normal" | "phase2",
+      killerId:            caseConfig?.killerId,
+      motiveDirection:     caseConfig?.motiveDirection,
     });
 
     // 8. 呼叫 Gemini

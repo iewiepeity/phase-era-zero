@@ -20,7 +20,8 @@ import {
   getSubMotivesForDirection,
 } from "./case-config";
 
-import type { Clue }           from "./npc-registry";
+import type { Clue }              from "./npc-registry";
+import { buildRedHerringClues }  from "./content/red-herrings";
 import { buildChenJieClues }   from "./content/clues-chen-jie";
 import { buildHanzhuoClues }   from "./content/clues-hanzhuo";
 import { buildYushuangClues }  from "./content/clues-yushuang";
@@ -41,20 +42,29 @@ export { buildZhuangheClues };
 export { buildLinzhixiaClues };
 export { buildTaoshengClues };
 
-/** 根據 npcId + CaseConfig 產生對應 NPC 的動態線索 */
+/** 根據 npcId + CaseConfig 產生對應 NPC 的動態線索（真實線索 + 紅鯡魚） */
 export function buildNpcClues(npcId: string, config: CaseConfig): Clue[] {
-  switch (npcId) {
-    case "chen_jie":  return buildChenJieClues(config);
-    case "hanzhuo":   return buildHanzhuoClues(config);
-    case "yushuang":  return buildYushuangClues(config);
-    case "zhengbo":   return buildZhengboClues(config);
-    case "it":        return buildItClues(config);
-    case "baiqiu":    return buildBaiqiuClues(config);
-    case "zhuanghe":  return buildZhuangheClues(config);
-    case "linzhixia": return buildLinzhixiaClues(config);
-    case "taosheng":  return buildTaoshengClues(config);
-    default:          return [];
-  }
+  const realClues: Clue[] = (() => {
+    switch (npcId) {
+      case "chen_jie":  return buildChenJieClues(config);
+      case "hanzhuo":   return buildHanzhuoClues(config);
+      case "yushuang":  return buildYushuangClues(config);
+      case "zhengbo":   return buildZhengboClues(config);
+      case "it":        return buildItClues(config);
+      case "baiqiu":    return buildBaiqiuClues(config);
+      case "zhuanghe":  return buildZhuangheClues(config);
+      case "linzhixia": return buildLinzhixiaClues(config);
+      case "taosheng":  return buildTaoshengClues(config);
+      default:          return [];
+    }
+  })();
+
+  // 兇手 NPC 不注入紅鯡魚（它已有偽裝指令，多餘且可能混淆）
+  if (npcId === config.killerId) return realClues;
+
+  // 無辜 NPC：附加 2 條紅鯡魚線索（魚目混珠）
+  const herrings = buildRedHerringClues(npcId, config, 2);
+  return [...realClues, ...herrings];
 }
 
 // ── Seed-based 偽隨機（mulberry32）────────────────────────────

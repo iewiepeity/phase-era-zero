@@ -3,29 +3,39 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { SUSPECTS } from "@/lib/case-config";
+import { NPC_REGISTRY } from "@/lib/npc-registry";
 import { STORAGE_KEYS } from "@/lib/constants";
-import type { KillerId } from "@/lib/case-config";
+
+// ── 全部 NPC 排序（按場景/登場順序）───────────────────────────
+
+const ALL_NPCS = Object.values(NPC_REGISTRY) as {
+  id: string; name: string; location: string;
+}[];
 
 // ── 型別 ──────────────────────────────────────────────────────
 
-interface SuspectNote {
+interface NpcNote {
   starred: boolean;
   memo:    string;
 }
 
 interface NotebookData {
   generalNotes: string;
-  suspects:     Partial<Record<KillerId, SuspectNote>>;
+  npcs:         Partial<Record<string, NpcNote>>;
 }
 
-const EMPTY_NOTEBOOK: NotebookData = { generalNotes: "", suspects: {} };
+const EMPTY_NOTEBOOK: NotebookData = { generalNotes: "", npcs: {} };
 
 function loadNotebook(sessionId: string): NotebookData {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.NOTEBOOK(sessionId));
     if (!raw) return EMPTY_NOTEBOOK;
-    return JSON.parse(raw) as NotebookData;
+    // 向後相容：舊資料可能用 suspects 鍵
+    const parsed = JSON.parse(raw) as Partial<NotebookData & { suspects: NotebookData["npcs"] }>;
+    return {
+      generalNotes: parsed.generalNotes ?? "",
+      npcs:         parsed.npcs ?? parsed.suspects ?? {},
+    };
   } catch {
     return EMPTY_NOTEBOOK;
   }
@@ -37,20 +47,16 @@ function saveNotebook(sessionId: string, data: NotebookData) {
   } catch { /* ignore */ }
 }
 
-// ── 嫌疑人列表 ────────────────────────────────────────────────
-
-const SUSPECT_LIST = Object.values(SUSPECTS) as { id: KillerId; name: string; role: string }[];
-
 // ── 主元件 ───────────────────────────────────────────────────
 
 export default function NotebookPage() {
   const params    = useParams();
   const sessionId = params.sessionId as string;
 
-  const [data,        setData]        = useState<NotebookData>(EMPTY_NOTEBOOK);
-  const [activeTab,   setActiveTab]   = useState<"general" | KillerId>("general");
-  const [mounted,     setMounted]     = useState(false);
-  const [savedFlash,  setSavedFlash]  = useState(false);
+  const [data,       setData]       = useState<NotebookData>(EMPTY_NOTEBOOK);
+  const [activeTab,  setActiveTab]  = useState<"general" | string>("general");
+  const [mounted,    setMounted]    = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
     setData(loadNotebook(sessionId));
@@ -71,27 +77,27 @@ export default function NotebookPage() {
   const setGeneralNotes = useCallback((v: string) =>
     setData((d) => ({ ...d, generalNotes: v })), []);
 
-  const toggleStar = useCallback((id: KillerId) =>
+  const toggleStar = useCallback((id: string) =>
     setData((d) => ({
       ...d,
-      suspects: {
-        ...d.suspects,
-        [id]: { ...d.suspects[id], starred: !(d.suspects[id]?.starred ?? false), memo: d.suspects[id]?.memo ?? "" },
+      npcs: {
+        ...d.npcs,
+        [id]: { starred: !(d.npcs[id]?.starred ?? false), memo: d.npcs[id]?.memo ?? "" },
       },
     })), []);
 
-  const setSuspectMemo = useCallback((id: KillerId, memo: string) =>
+  const setNpcMemo = useCallback((id: string, memo: string) =>
     setData((d) => ({
       ...d,
-      suspects: {
-        ...d.suspects,
-        [id]: { ...d.suspects[id], starred: d.suspects[id]?.starred ?? false, memo },
+      npcs: {
+        ...d.npcs,
+        [id]: { starred: d.npcs[id]?.starred ?? false, memo },
       },
     })), []);
 
   if (!mounted) return null;
 
-  const starredCount = SUSPECT_LIST.filter((s) => data.suspects[s.id]?.starred).length;
+  const starredCount = ALL_NPCS.filter((n) => data.npcs[n.id]?.starred).length;
 
   return (
     <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-[#0d1117]">
@@ -118,9 +124,9 @@ export default function NotebookPage() {
           </span>
         </header>
 
-        {/* 嫌疑人概覽列 */}
+        {/* NPC 分頁列 */}
         <div className="px-4 py-2 border-b border-[#e2c9a0]/4 flex items-center gap-1.5 overflow-x-auto">
-          {/* 「全局筆記」tab */}
+          {/* 全局筆記 tab */}
           <button
             onClick={() => setActiveTab("general")}
             className={`shrink-0 font-mono-sys text-[9px] tracking-widest px-2.5 py-1.5 rounded border transition-all ${
@@ -132,21 +138,21 @@ export default function NotebookPage() {
             📓 全局
           </button>
 
-          {SUSPECT_LIST.map((s) => {
-            const starred = data.suspects[s.id]?.starred ?? false;
-            const hasMemo = (data.suspects[s.id]?.memo ?? "").trim().length > 0;
+          {ALL_NPCS.map((npc) => {
+            const starred = data.npcs[npc.id]?.starred ?? false;
+            const hasMemo = (data.npcs[npc.id]?.memo ?? "").trim().length > 0;
             return (
               <button
-                key={s.id}
-                onClick={() => setActiveTab(s.id)}
+                key={npc.id}
+                onClick={() => setActiveTab(npc.id)}
                 className={`shrink-0 flex items-center gap-1 font-mono-sys text-[9px] tracking-widest px-2.5 py-1.5 rounded border transition-all ${
-                  activeTab === s.id
+                  activeTab === npc.id
                     ? "border-[#ff3864]/40 text-[#ff3864]/80 bg-[#ff3864]/06"
                     : "border-[#e2c9a0]/10 text-[#e2c9a0]/30 hover:border-[#e2c9a0]/22"
                 }`}
               >
                 {starred ? "★" : hasMemo ? "✎" : ""}
-                {s.name}
+                {npc.name}
               </button>
             );
           })}
@@ -179,54 +185,56 @@ export default function NotebookPage() {
               {starredCount > 0 && (
                 <div className="border border-[#e2c9a0]/8 rounded p-4 bg-[#0d1117]/70">
                   <p className="font-mono-sys text-[9px] text-[#e2c9a0]/30 tracking-widest mb-3">
-                    ★ 主要嫌疑人 ({starredCount})
+                    ★ 重點關注 ({starredCount})
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {SUSPECT_LIST.filter((s) => data.suspects[s.id]?.starred).map((s) => (
+                    {ALL_NPCS.filter((n) => data.npcs[n.id]?.starred).map((n) => (
                       <button
-                        key={s.id}
-                        onClick={() => setActiveTab(s.id)}
+                        key={n.id}
+                        onClick={() => setActiveTab(n.id)}
                         className="font-mono-sys text-[9px] px-2.5 py-1 rounded border border-[#ff3864]/30 text-[#ff3864]/65 hover:bg-[#ff3864]/08 transition-colors tracking-wide"
                       >
-                        ★ {s.name}
+                        ★ {n.name}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* 提示（混淆身份）*/}
+              <p
+                className="text-[11px] text-[#e2c9a0]/18 leading-relaxed"
+                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+              >
+                每個人都有自己的秘密。你的工作是找出那個秘密背後還藏著什麼。
+              </p>
             </div>
           )}
 
-          {/* 嫌疑人詳細備忘 */}
+          {/* NPC 詳細備忘 */}
           {activeTab !== "general" && (() => {
-            const suspect = SUSPECTS[activeTab as KillerId];
-            if (!suspect) return null;
-            const note    = data.suspects[activeTab as KillerId] ?? { starred: false, memo: "" };
+            const npc  = NPC_REGISTRY[activeTab];
+            if (!npc) return null;
+            const note = data.npcs[activeTab] ?? { starred: false, memo: "" };
             return (
               <div className="space-y-5">
-                {/* 嫌疑人資訊 */}
+                {/* NPC 資訊 */}
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2
                       className="text-lg tracking-widest text-[#e2c9a0]/85 mb-0.5"
                       style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
                     >
-                      {suspect.name}
+                      {npc.name}
                     </h2>
                     <p className="font-mono-sys text-[10px] text-[#e2c9a0]/30 tracking-widest">
-                      {suspect.role}
-                    </p>
-                    <p
-                      className="text-xs text-[#e2c9a0]/35 leading-relaxed mt-2 max-w-xs"
-                      style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
-                    >
-                      {suspect.description}
+                      {npc.location}
                     </p>
                   </div>
 
                   {/* 星標按鈕 */}
                   <button
-                    onClick={() => toggleStar(activeTab as KillerId)}
+                    onClick={() => toggleStar(activeTab)}
                     className={`shrink-0 w-12 h-12 rounded-full border flex items-center justify-center text-xl transition-all duration-200 ${
                       note.starred
                         ? "border-[#ff3864]/50 bg-[#ff3864]/10 text-[#ff3864]"
@@ -247,8 +255,8 @@ export default function NotebookPage() {
                   </div>
                   <textarea
                     value={note.memo}
-                    onChange={(e) => setSuspectMemo(activeTab as KillerId, e.target.value)}
-                    placeholder={`關於 ${suspect.name} 的可疑之處、說謊的證據、動機線索……`}
+                    onChange={(e) => setNpcMemo(activeTab, e.target.value)}
+                    placeholder={`關於 ${npc.name} 的可疑之處、說的話、前後矛盾的細節……`}
                     rows={12}
                     className="w-full bg-[#111820] border border-[#e2c9a0]/10 rounded px-4 py-3 text-sm text-[#e2c9a0]/75 placeholder-[#e2c9a0]/18 focus:outline-none focus:border-[#e2c9a0]/22 resize-none leading-loose"
                     style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
