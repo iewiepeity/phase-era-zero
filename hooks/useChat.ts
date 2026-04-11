@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { getNpc } from "@/lib/npc-registry";
 import { getNpcGreeting } from "@/lib/content/narrative";
 import { NPC_TYPING_MS, STORAGE_KEYS } from "@/lib/constants";
+import { consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
 import type { UiMessage, NpcStateUI, ChatErrorKind } from "@/lib/types";
 
 type LoadState = "idle" | "loading" | "ready";
@@ -184,6 +185,10 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
     setInput("");
     setSending(true);
     setErrorKind(null);
+
+    // 消耗 1 行動點（對話）
+    consumeActionPoints(sessionId, 1);
+    void syncActionPointsToDB(sessionId);
 
     const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 

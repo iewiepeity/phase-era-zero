@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, type DifficultyId } from "@/lib/content/difficulty";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { initActionPoints } from "@/lib/services/action-points";
 
 /**
  * /game/[sessionId]/difficulty
@@ -29,6 +30,8 @@ export default function DifficultyPage() {
 
     // 1. localStorage
     localStorage.setItem(STORAGE_KEYS.DIFFICULTY(sessionId), selected);
+    // 初始化行動點（依難度設定）
+    initActionPoints(sessionId, selected);
 
     // 2. DB（非阻塞）
     try {

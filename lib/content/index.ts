@@ -8,6 +8,7 @@ export * from "./prologue";
 export * from "./difficulty";
 export * from "./achievements";
 export * from "./endings";
+export * from "./endings-detailed";
 export * from "./npc-chen-jie";
 export * from "./npc-hanzhuo";
 export * from "./npc-yushuang";

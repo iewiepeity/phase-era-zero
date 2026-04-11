@@ -10,6 +10,7 @@ import { TrustBar } from "@/components/ui/TrustBar";
 import { NPC_CHAT_OPTIONS } from "@/lib/content/action-options";
 import { ActionPanel } from "@/components/game/ActionPanel";
 import { FontSizeControl } from "@/components/ui/FontSizeControl";
+import { TutorialOverlay } from "@/components/game/TutorialOverlay";
 
 export default function GameChatPage() {
   const params    = useParams();
@@ -224,6 +225,9 @@ export default function GameChatPage() {
           送出
         </button>
       </div>
+
+      {/* C5: 新手引導 */}
+      <TutorialOverlay kind="chat" />
     </div>
   );
 }

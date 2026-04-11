@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {
-    // 明確指定 workspace root，避免偵測到上層 package-lock.json 的誤報
-    root: path.resolve(__dirname),
+    // worktree 環境：將 workspace root 設為上層專案目錄（node_modules 在那裡）
+    root: path.resolve(__dirname, "../../.."),
   },
 };
 

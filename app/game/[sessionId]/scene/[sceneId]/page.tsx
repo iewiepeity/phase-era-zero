@@ -10,6 +10,7 @@ import { STORAGE_KEYS, NPC_COLORS, DEFAULT_NPC_COLOR, SCENE_PALETTE, DEFAULT_SCE
 import { SCENE_ATMOSPHERE } from "@/lib/content/narrative";
 import { SCENE_ACTIONS } from "@/lib/content/action-options";
 import { ActionPanel } from "@/components/game/ActionPanel";
+import { TutorialOverlay } from "@/components/game/TutorialOverlay";
 
 // ── Typewriter hook ────────────────────────────────────────────
 
@@ -544,6 +545,9 @@ export default function ScenePage() {
           </div>
         </>
       )}
+
+      {/* C5: 新手引導 */}
+      <TutorialOverlay kind="scene" />
     </div>
   );
 }

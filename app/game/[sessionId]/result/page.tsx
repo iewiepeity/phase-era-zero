@@ -7,6 +7,7 @@ import { SUSPECTS, MOTIVES, SUB_MOTIVES } from "@/lib/case-config";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { WIN_TEXTS, LOSE_KILLER_TEXTS, LOSE_MOTIVE_TEXTS } from "@/lib/content/endings";
+import { getKillerEnding, SILENT_ENDING, RUNAWAY_ENDING, PERFECT_ENDING } from "@/lib/content/endings-detailed";
 import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
 interface AccuseResult {
@@ -49,17 +50,40 @@ export default function ResultPage() {
   const params    = useParams();
   const sessionId = params.sessionId as string;
 
-  const [result,      setResult]      = useState<AccuseResult | null>(null);
-  const [phaseIdx,    setPhaseIdx]    = useState(0);   // 0=黑屏 1=標題 2=分數 3=全顯
-  const [ringAnimate, setRingAnimate] = useState(false);
+  const [result,        setResult]        = useState<AccuseResult | null>(null);
+  const [phaseIdx,      setPhaseIdx]      = useState(0);   // 0=黑屏 1=標題 2=分數 3=全顯
+  const [ringAnimate,   setRingAnimate]   = useState(false);
+  const [specialEnding, setSpecialEnding] = useState<"silent" | "runaway" | "perfect" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
+    // 檢查特殊結局旗標
+    try {
+      const isSilent  = !!localStorage.getItem(STORAGE_KEYS.SILENT_ENDING(sessionId));
+      const evRaw     = localStorage.getItem(`pez_ev_${sessionId}`);
+      const evValue   = evRaw ? parseInt(evRaw, 10) : 0;
+      const isRunaway = evValue > 80;
+      if (isSilent) { setSpecialEnding("silent"); }
+      else if (isRunaway) { setSpecialEnding("runaway"); }
+    } catch { /* ignore */ }
+
     const raw = localStorage.getItem(STORAGE_KEYS.RESULT(sessionId));
     if (!raw) return;
     try {
       const data = JSON.parse(raw) as AccuseResult;
       setResult(data);
+
+      // 完美推理：正確指控 + 80% 以上線索（用場景互動數估算）
+      if (data.correct) {
+        try {
+          const keys = Object.keys(localStorage).filter((k) => k.startsWith(`pez_interacted_${sessionId}_`));
+          let total = 0;
+          for (const k of keys) {
+            total += (localStorage.getItem(k) ?? "").split(",").filter(Boolean).length;
+          }
+          if (total >= 8) setSpecialEnding("perfect");
+        } catch { /* ignore */ }
+      }
 
       const t1 = setTimeout(() => setPhaseIdx(1),         300);
       const t2 = setTimeout(() => setPhaseIdx(2),        1000);
@@ -70,6 +94,34 @@ export default function ResultPage() {
 
     return () => timerRef.current.forEach(clearTimeout);
   }, [sessionId]);
+
+  // ── 沉默結局（無指控資料）────────────────────────────────────
+  if (!result && specialEnding === "silent") {
+    return (
+      <div className="relative min-h-screen flex flex-col bg-[#0d1117] overflow-hidden">
+        <div className="absolute inset-0 bg-grid-static opacity-30" aria-hidden="true" />
+        <div className="relative z-10 flex-1 flex flex-col max-w-xl mx-auto w-full">
+          <header className="flex items-center justify-between px-4 py-3 border-b border-[#e2c9a0]/6">
+            <Link href="/game" className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 tracking-widest transition-colors">← 大廳</Link>
+            <p className="font-mono-sys text-[10px] text-[#5bb8ff]/35 tracking-widest">SILENCE ENDING</p>
+            <div className="w-16" />
+          </header>
+          <div className="flex-1 flex flex-col items-center px-6 py-12 gap-8">
+            <p className="font-mono-sys text-[9px] text-[#5bb8ff]/35 tracking-[0.5em] uppercase">SILENCE ENDING</p>
+            <h2 className="text-3xl tracking-widest text-[#e2c9a0]/45" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
+              你選擇了沉默
+            </h2>
+            <p className="text-sm text-[#e2c9a0]/48 leading-[2.0] max-w-xs mx-auto text-center" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
+              {SILENT_ENDING}
+            </p>
+            <Link href="/game" className="w-full max-w-xs py-3.5 border border-[#ff3864]/55 text-[#ff3864] text-sm tracking-[0.2em] hover:bg-[#ff3864]/10 transition-all duration-300 rounded text-center">
+              重新開局
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── 無資料 ────────────────────────────────────────────────
   if (!result) {
@@ -95,11 +147,34 @@ export default function ResultPage() {
   const correctKiller = SUSPECTS[answer.killerId];
   const correctMotive = MOTIVES[answer.motiveDirection];
   const flavorSeed    = answer.killerId.charCodeAt(0);
-  const flavorText    = correct
-    ? pickText(WIN_TEXTS, flavorSeed)
-    : !killerCorrect
-    ? pickText(LOSE_KILLER_TEXTS, flavorSeed)
-    : pickText(LOSE_MOTIVE_TEXTS, flavorSeed);
+
+  // 特殊結局優先；其次使用兇手專屬結局（正確指控時）
+  const detailedEnding = specialEnding === "silent"
+    ? SILENT_ENDING
+    : specialEnding === "runaway"
+    ? RUNAWAY_ENDING
+    : specialEnding === "perfect"
+    ? PERFECT_ENDING
+    : correct
+    ? getKillerEnding(answer.killerId)
+    : null;
+
+  const flavorText = detailedEnding ?? (
+    correct
+      ? pickText(WIN_TEXTS, flavorSeed)
+      : !killerCorrect
+      ? pickText(LOSE_KILLER_TEXTS, flavorSeed)
+      : pickText(LOSE_MOTIVE_TEXTS, flavorSeed)
+  );
+
+  // 特殊結局標籤
+  const specialLabel = specialEnding === "silent"
+    ? "SILENCE ENDING"
+    : specialEnding === "runaway"
+    ? "RUNAWAY ENDING"
+    : specialEnding === "perfect"
+    ? "PERFECT ENDING"
+    : null;
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#0d1117] overflow-hidden">
@@ -147,20 +222,26 @@ export default function ResultPage() {
             style={{ opacity: phaseIdx >= 1 ? 1 : 0, transform: phaseIdx >= 1 ? "translateY(0)" : "translateY(20px)" }}
           >
             <p className="font-mono-sys text-[9px] text-[#5bb8ff]/35 tracking-[0.5em] uppercase mb-2">
-              {correct ? "CASE SOLVED" : "CASE FAILED"}
+              {specialLabel ?? (correct ? "CASE SOLVED" : "CASE FAILED")}
             </p>
-            {correct ? (
-              <h2
-                className="text-3xl tracking-widest text-[#ff3864] glow-text-accent"
-                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
-              >
+            {specialEnding === "silent" ? (
+              <h2 className="text-3xl tracking-widest text-[#e2c9a0]/45" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
+                你選擇了沉默
+              </h2>
+            ) : specialEnding === "runaway" ? (
+              <h2 className="text-3xl tracking-widest text-[#ff3864]/85 glow-text-accent" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
+                你找到了真相，但真相也找到了你
+              </h2>
+            ) : specialEnding === "perfect" ? (
+              <h2 className="text-3xl tracking-widest text-[#4ade80]" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
+                完美推理
+              </h2>
+            ) : correct ? (
+              <h2 className="text-3xl tracking-widest text-[#ff3864] glow-text-accent" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
                 你找到了真相
               </h2>
             ) : (
-              <h2
-                className="text-3xl tracking-widest text-[#e2c9a0]/65"
-                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
-              >
+              <h2 className="text-3xl tracking-widest text-[#e2c9a0]/65" style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}>
                 {killerCorrect ? "方向錯了" : "找錯了人"}
               </h2>
             )}

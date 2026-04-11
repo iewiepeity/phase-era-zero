@@ -34,6 +34,18 @@ export const STORAGE_KEYS = {
   ACHIEVEMENTS: (sessionId: string) => `pez_achievements_${sessionId}`,
   /** 本局場景物件已互動清單 key: sceneId → comma-separated item IDs */
   SCENE_INTERACTED: (sessionId: string, sceneId: string) => `pez_interacted_${sessionId}_${sceneId}`,
+  /** 剩餘行動點 */
+  ACTION_POINTS: (sessionId: string) => `pez_ap_${sessionId}`,
+  /** 最大行動點（由難度決定）*/
+  MAX_ACTION_POINTS: (sessionId: string) => `pez_max_ap_${sessionId}`,
+  /** 行動點耗盡後直接結束（沉默結局旗標）*/
+  SILENT_ENDING: (sessionId: string) => `pez_silent_${sessionId}`,
+  /** 推理筆記本資料 */
+  NOTEBOOK: (sessionId: string) => `pez_notebook_${sessionId}`,
+  /** 是否已看過場景探索新手教學 */
+  TUTORIAL_SCENE: "pez_tutorial_scene",
+  /** 是否已看過對話新手教學 */
+  TUTORIAL_CHAT: "pez_tutorial_chat",
 } as const;
 
 // ── NPC 色彩配置 ───────────────────────────────────────────────
