@@ -1,6 +1,6 @@
 /**
  * NPC Registry — 所有 NPC 的靜態定義
- * Phase 7：15 位 NPC（9 嫌疑人 + 6 一般 NPC）
+ * Phase 8：23 位 NPC（9 嫌疑人 + 14 一般 NPC，含 4 位玩家相關）
  */
 
 import { CHEN_JIE_BASE_PROMPT,   ACT_STATE_MAP as CHEN_JIE_ACT_STATE_MAP   } from "./content/npc-chen-jie";
@@ -18,6 +18,14 @@ import { NEIGHBOR_BASE_PROMPT,   NEIGHBOR_ACT_STATE_MAP   } from "./content/npc-
 import { CLERK_BASE_PROMPT,      CLERK_ACT_STATE_MAP      } from "./content/npc-clerk";
 import { TAXI_DRIVER_BASE_PROMPT, TAXI_DRIVER_ACT_STATE_MAP } from "./content/npc-taxi-driver";
 import { PROFESSOR_BASE_PROMPT,  PROFESSOR_ACT_STATE_MAP  } from "./content/npc-professor";
+import { BARTENDER_BASE_PROMPT,  BARTENDER_ACT_STATE_MAP  } from "./content/npc-bartender";
+import { HOMELESS_BASE_PROMPT,   HOMELESS_ACT_STATE_MAP   } from "./content/npc-homeless";
+import { VENDOR_BASE_PROMPT,     VENDOR_ACT_STATE_MAP     } from "./content/npc-vendor";
+import { MORTICIAN_BASE_PROMPT,  MORTICIAN_ACT_STATE_MAP  } from "./content/npc-mortician";
+import { PLAYER_NEIGHBOR_BASE_PROMPT, PLAYER_NEIGHBOR_ACT_STATE_MAP } from "./content/npc-player-neighbor";
+import { ROOMMATE_BASE_PROMPT,   ROOMMATE_ACT_STATE_MAP   } from "./content/npc-roommate";
+import { LAWYER_BASE_PROMPT,     LAWYER_ACT_STATE_MAP     } from "./content/npc-lawyer";
+import { OLD_FRIEND_BASE_PROMPT, OLD_FRIEND_ACT_STATE_MAP } from "./content/npc-old-friend";
 
 // ── 型別（與 game-engine-spec.md 對齊）────────────────────────
 export interface ClueCondition {
@@ -82,7 +90,7 @@ export const NPC_REGISTRY: Record<string, NpcDefinition> = {
     name: "陳姐",
     location: "賽德里斯中城區麵館",
     sceneId: "chen_jie_noodles",
-    isSuspect: true,
+    isSuspect: false,
     basePrompt: CHEN_JIE_BASE_PROMPT,
     actStateMap: CHEN_JIE_ACT_STATE_MAP,
     clues: CHEN_JIE_CLUES,
@@ -261,6 +269,110 @@ export const NPC_REGISTRY: Record<string, NpcDefinition> = {
     actStateMap: PROFESSOR_ACT_STATE_MAP,
     clues: [],
     trustIncrement: { default: 3, friendly: 7, goodbye: 10 },
+  },
+
+  // ── 老城區茶酒室 ──────────────────────────────────────────────
+  bartender: {
+    id: "bartender",
+    name: "老秦",
+    location: "老城區茶酒室",
+    sceneId: "bai_qiu_pharmacy",
+    isSuspect: false,
+    basePrompt: BARTENDER_BASE_PROMPT,
+    actStateMap: BARTENDER_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 4, friendly: 9, goodbye: 8 },
+  },
+
+  // ── 案發現場周邊（街友）──────────────────────────────────────
+  homeless: {
+    id: "homeless",
+    name: "老默",
+    location: "案發現場／碼頭邊緣",
+    sceneId: "crime_scene",
+    isSuspect: false,
+    basePrompt: HOMELESS_BASE_PROMPT,
+    actStateMap: HOMELESS_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 2, friendly: 6, goodbye: 5 },
+  },
+
+  // ── 老城區夜市（攤販）────────────────────────────────────────
+  vendor: {
+    id: "vendor",
+    name: "大姐",
+    location: "老城區夜市",
+    sceneId: "chen_jie_noodles",
+    isSuspect: false,
+    basePrompt: VENDOR_BASE_PROMPT,
+    actStateMap: VENDOR_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 5, friendly: 10, goodbye: 7 },
+  },
+
+  // ── 中央醫療院太平間 ──────────────────────────────────────────
+  mortician: {
+    id: "mortician",
+    name: "老吳",
+    location: "中央醫療院太平間",
+    sceneId: "medical_center",
+    isSuspect: false,
+    basePrompt: MORTICIAN_BASE_PROMPT,
+    actStateMap: MORTICIAN_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 3, friendly: 7, goodbye: 9 },
+  },
+
+  // ── 玩家住所（同棟鄰居）──────────────────────────────────────
+  player_neighbor: {
+    id: "player_neighbor",
+    name: "陳太太",
+    location: "玩家住所同層走廊",
+    sceneId: "chen_jie_noodles",
+    isSuspect: false,
+    basePrompt: PLAYER_NEIGHBOR_BASE_PROMPT,
+    actStateMap: PLAYER_NEIGHBOR_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 4, friendly: 8, goodbye: 10 },
+  },
+
+  // ── 玩家室友 ──────────────────────────────────────────────────
+  roommate: {
+    id: "roommate",
+    name: "阿傑",
+    location: "玩家住所／附近咖啡廳",
+    sceneId: "bai_qiu_pharmacy",
+    isSuspect: false,
+    basePrompt: ROOMMATE_BASE_PROMPT,
+    actStateMap: ROOMMATE_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 5, friendly: 11, goodbye: 9 },
+  },
+
+  // ── 辯護律師 ──────────────────────────────────────────────────
+  lawyer: {
+    id: "lawyer",
+    name: "嚴律師",
+    location: "第九分局走廊／律師事務所",
+    sceneId: "ninth_precinct",
+    isSuspect: false,
+    basePrompt: LAWYER_BASE_PROMPT,
+    actStateMap: LAWYER_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 4, friendly: 8, goodbye: 12 },
+  },
+
+  // ── 前同事 ────────────────────────────────────────────────────
+  old_friend: {
+    id: "old_friend",
+    name: "阿文",
+    location: "中城區咖啡廳",
+    sceneId: "zhengbo_office",
+    isSuspect: false,
+    basePrompt: OLD_FRIEND_BASE_PROMPT,
+    actStateMap: OLD_FRIEND_ACT_STATE_MAP,
+    clues: [],
+    trustIncrement: { default: 6, friendly: 12, goodbye: 10 },
   },
 };
 

@@ -128,6 +128,46 @@ export const NPC_COLORS: Record<string, { dot: string; bubble: string; border: s
     bubble: "rgba(167,139,250,0.05)",
     border: "rgba(167,139,250,0.15)",
   },
+  bartender: {
+    dot:    "#d97706",
+    bubble: "rgba(217,119,6,0.05)",
+    border: "rgba(217,119,6,0.16)",
+  },
+  homeless: {
+    dot:    "#78716c",
+    bubble: "rgba(120,113,108,0.05)",
+    border: "rgba(120,113,108,0.15)",
+  },
+  vendor: {
+    dot:    "#f43f5e",
+    bubble: "rgba(244,63,94,0.05)",
+    border: "rgba(244,63,94,0.15)",
+  },
+  mortician: {
+    dot:    "#64748b",
+    bubble: "rgba(100,116,139,0.05)",
+    border: "rgba(100,116,139,0.15)",
+  },
+  player_neighbor: {
+    dot:    "#84cc16",
+    bubble: "rgba(132,204,22,0.05)",
+    border: "rgba(132,204,22,0.14)",
+  },
+  roommate: {
+    dot:    "#22d3ee",
+    bubble: "rgba(34,211,238,0.05)",
+    border: "rgba(34,211,238,0.15)",
+  },
+  lawyer: {
+    dot:    "#818cf8",
+    bubble: "rgba(129,140,248,0.05)",
+    border: "rgba(129,140,248,0.16)",
+  },
+  old_friend: {
+    dot:    "#4ade80",
+    bubble: "rgba(74,222,128,0.05)",
+    border: "rgba(74,222,128,0.14)",
+  },
 };
 
 /** 找不到指定 NPC 時的預設色 */

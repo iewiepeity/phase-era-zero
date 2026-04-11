@@ -205,6 +205,136 @@ export const DIALOGUE_TRIGGERS: DialogueTrigger[] = [
       "如果對方提到大學或那個研究室，你說：「那個地方我去過一次。有個女生問了我好幾個問題，問我有沒有過記憶斷掉的感覺，或者有沒有覺得做了什麼事但不記得做過。」你停了一下：「我說有。她把我說的話都記下來了，然後問我願不願意讓她採樣。我說我要想想。我現在還在想。」",
     priority:    "normal",
   },
+
+  // ── 律師：蒐集 5 條以上線索後開放 ──────────────────────────
+  {
+    id:          "lawyer_unlocked_by_clues",
+    targetNpcId: "lawyer",
+    conditions:  [
+      { type: "visitedScene", sceneId: "ninth_precinct" },
+      { type: "hasClue",      clueId: "clue_chen_jie_01" },
+    ],
+    promptInjection:
+      "【觸發情境：對方已掌握若干線索並進入第九分局】\n" +
+      "你看著這個人，你判斷他已經有了一些東西——說話的方式，問的問題，都不像什麼都不知道的人。你說：「你找到了什麼，告訴我，我可以告訴你它在法律文件上的版本對不對得上。」你停了一下：「如果對不上，那才是重點。」",
+    priority:    "high",
+  },
+
+  // ── 律師：在第九分局見過余霜之後 ────────────────────────────
+  {
+    id:          "lawyer_after_yushuang",
+    targetNpcId: "lawyer",
+    conditions:  [{ type: "talkedTo", npcId: "yushuang" }],
+    promptInjection:
+      "【觸發情境：對方跟余霜說過話】\n" +
+      "如果對方提到余霜，你把手上的筆放下來——這是你在說重要事情之前的習慣。你說：「她在第一次訊問和第三次訊問之間，說法有一個關鍵差異。」你停了一下：「那個差異涉及的時間段，正好是起訴書裡那二十分鐘的空白。」",
+    priority:    "high",
+  },
+
+  // ── 室友：玩家去過案發現場之後 ─────────────────────────────
+  {
+    id:          "roommate_after_crime_scene",
+    targetNpcId: "roommate",
+    conditions:  [{ type: "visitedScene", sceneId: "crime_scene" }],
+    promptInjection:
+      "【觸發情境：對方去過案發現場】\n" +
+      "如果對方提到案發現場，你沉默了一秒。然後你說：「那個地方——玩家去過一次，回來之後沉默了整個晚上。我問他有什麼事，他說沒事，但他沒有吃晚飯。他從來不忘記吃飯。」你停下來讓這句話在空氣裡待一下。",
+    priority:    "normal",
+  },
+
+  // ── 室友：對方提到 BTMA 之後 ────────────────────────────────
+  {
+    id:          "roommate_btma_mention",
+    targetNpcId: "roommate",
+    conditions:  [{ type: "visitedScene", sceneId: "btma_lobby" }],
+    promptInjection:
+      "【觸發情境：對方去過 BTMA 大廳，可能知道 BTMA 是什麼】\n" +
+      "如果對方提到 BTMA 這個縮寫，你的表情有一點變化。你說：「你說 BTMA？」你停了一下：「那通電話裡，我聽到了這個詞。玩家當時壓低了聲音，但那個詞我聽得很清楚。我一直不知道它是什麼。你知道？」",
+    priority:    "high",
+  },
+
+  // ── 阿文：去過廢棄倉庫之後 ─────────────────────────────────
+  {
+    id:          "old_friend_after_warehouse",
+    targetNpcId: "old_friend",
+    conditions:  [{ type: "visitedScene", sceneId: "abandoned_warehouse" }],
+    promptInjection:
+      "【觸發情境：對方去過廢棄倉庫】\n" +
+      "如果對方提到碼頭倉庫，你想起一件事：「那個前同事，他離職的前一個禮拜，他說他去了一個地方，說是在港口那邊，說是見一個人。」你停了一下：「我當時以為他在說工作的事。後來我才想到，他離職是那個見面之後兩天的事。」",
+    priority:    "high",
+  },
+
+  // ── 阿文：提供不在場證明（已有訊息紀錄）────────────────────
+  {
+    id:          "old_friend_alibi_trigger",
+    targetNpcId: "old_friend",
+    conditions:  [
+      { type: "talkedTo",    npcId:   "lawyer"          },
+      { type: "visitedScene", sceneId: "ninth_precinct"  },
+    ],
+    promptInjection:
+      "【觸發情境：對方已見過律師，且去過第九分局】\n" +
+      "你知道這個人在認真處理案子。你說：「我有訊息記錄，我們聊天的那幾個晚上，時間點我標出來了。如果律師說那幾個日期有用，我可以提供截圖。」你停了一下：「我不是要替任何人擔保，我只是說那個記錄是真的，發生過的就是發生過的。」",
+    priority:    "high",
+  },
+
+  // ── 陳太太：見過室友之後 ────────────────────────────────────
+  {
+    id:          "player_neighbor_after_roommate",
+    targetNpcId: "player_neighbor",
+    conditions:  [{ type: "talkedTo", npcId: "roommate" }],
+    promptInjection:
+      "【觸發情境：對方跟阿傑說過話】\n" +
+      "如果對方提到阿傑，你想起一件事：「那個在走廊等的男人，他說他是阿傑的朋友。但那天阿傑不在——我聽得出來，阿傑在家的時候走路聲音比較輕，他不在的時候，走廊是靜的。」你停了一下：「那個男人在等的不是阿傑，他在等你的玩家。」",
+    priority:    "high",
+  },
+
+  // ── 老默：去過廢棄倉庫之後 ─────────────────────────────────
+  {
+    id:          "homeless_after_warehouse",
+    targetNpcId: "homeless",
+    conditions:  [{ type: "visitedScene", sceneId: "abandoned_warehouse" }],
+    promptInjection:
+      "【觸發情境：對方去過廢棄倉庫】\n" +
+      "如果對方提到倉庫，你說：「你去了。」不是問句。你沉默了一下，然後：「那個地方的地板，左邊那塊，有個不一樣的地方。不是我說的那兩個人做的——是更早的人做的。那個凹陷的形狀，我見過，在別的地方也見過，就是不記得在哪裡。」",
+    priority:    "high",
+  },
+
+  // ── 老秦：去過案發現場之後 ──────────────────────────────────
+  {
+    id:          "bartender_after_crime_scene",
+    targetNpcId: "bartender",
+    conditions:  [{ type: "visitedScene", sceneId: "crime_scene" }],
+    promptInjection:
+      "【觸發情境：對方去過案發現場】\n" +
+      "如果對方提到案發現場，你慢慢擦著杯子說：「那個地方，你現在去，看到的是封鎖線。兩個月前，我有個客人說他約了人在那附近。」你停了一下：「他說那個人讓他去一個說不清楚在哪裡的地方。說這話的第二天，他就不見了。」你把杯子放下，不說了。",
+    priority:    "high",
+  },
+
+  // ── 大姐：見過陳姐之後 ──────────────────────────────────────
+  {
+    id:          "vendor_after_chen_jie",
+    targetNpcId: "vendor",
+    conditions:  [{ type: "talkedTo", npcId: "chen_jie" }],
+    promptInjection:
+      "【觸發情境：對方跟陳姐聊過】\n" +
+      "如果對方提到陳姐，你說：「她跟你說了多少？」語氣帶一點點好奇，不是惡意的。「她知道那輛車，我知道她知道，她也知道我知道她知道。我們都沒有說。」你夾了一塊豆干：「她不說是因為她謹慎，我不說是因為我不確定說了有沒有用。現在你來問了，那就算有用吧。」",
+    priority:    "normal",
+  },
+
+  // ── 老吳：余霜高信任度後 ────────────────────────────────────
+  {
+    id:          "mortician_high_trust",
+    targetNpcId: "mortician",
+    conditions:  [
+      { type: "talkedTo",  npcId:   "yushuang"       },
+      { type: "trustLevel", npcId: "mortician", minLevel: 50 },
+    ],
+    promptInjection:
+      "【觸發情境：對方跟余霜說過話，且老吳信任度達到 50】\n" +
+      "你把備忘本拿出來，翻到某一頁，推向對方。「這是余霜第二次來的日期，這是她出示的代碼，這是那批文件的編號序列。」你用手指指著一行：「這個編號，在序列裡不存在。它是插入的。誰有辦法做這件事，我不知道，但我知道它不應該在那裡。」",
+    priority:    "high",
+  },
 ];
 
 // ── 查詢函式 ────────────────────────────────────────────────────
