@@ -39,8 +39,9 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as {
       sessionId:                    string;
       sceneId:                      string;
-      itemId:                       string;
-      interactionType:              string;
+      itemId?:                      string;
+      objectId?:                    string; // 相容舊版欄位名（等同 itemId）
+      interactionType?:             string;
       currentAct?:                  number;
       visitedSceneIds?:             string[];
       alreadyUnlockedAchievements?: string[];
@@ -49,14 +50,16 @@ export async function POST(req: NextRequest) {
     const {
       sessionId,
       sceneId,
-      itemId,
-      interactionType,
       currentAct                  = 1,
       visitedSceneIds             = [],
       alreadyUnlockedAchievements = [],
     } = body;
 
-    if (!sessionId || !sceneId || !itemId || !interactionType) {
+    // 相容 objectId（舊版）與 itemId（新版）
+    const itemId          = body.itemId ?? body.objectId ?? "";
+    const interactionType = body.interactionType ?? "examine";
+
+    if (!sessionId || !sceneId || !itemId) {
       return NextResponse.json({ error: "missing required fields" }, { status: 400 });
     }
 

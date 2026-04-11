@@ -85,19 +85,9 @@ export async function GET(req: NextRequest) {
 // ── POST /api/chat — 傳送訊息 ────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const {
-      messages,
-      sessionId,
-      guestId,
-      npcId,
-      currentAct   = 1,
-      playerRoute  = "A",
-      currentSceneId,
-      visitedScenes  = [],
-      currentEv    = 0,
-      alreadyUnlockedAchievements = [],
-    } = (await req.json()) as {
-      messages:       ChatMessage[];
+    const body = (await req.json()) as {
+      messages?:      ChatMessage[];
+      message?:       string;       // 相容簡易呼叫：單一訊息字串
       sessionId?:     string;
       guestId?:       string;
       npcId:          string;
@@ -109,8 +99,32 @@ export async function POST(req: NextRequest) {
       alreadyUnlockedAchievements?: string[];
     };
 
+    const {
+      sessionId,
+      guestId,
+      npcId,
+      currentAct   = 1,
+      playerRoute  = "A",
+      currentSceneId,
+      visitedScenes  = [],
+      currentEv    = 0,
+      alreadyUnlockedAchievements = [],
+    } = body;
+
+    // 相容兩種傳訊格式：
+    //   完整格式：messages: [{role, content}, ...]
+    //   簡易格式：message: "字串"（自動包成 messages 陣列）
+    let messages: ChatMessage[] = body.messages ?? [];
+    if ((!messages || messages.length === 0) && body.message) {
+      messages = [{ role: "user", content: body.message }];
+    }
+
     if (!npcId) {
       return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：npcId" }, { status: 400 });
+    }
+
+    if (!messages || messages.length === 0) {
+      return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：messages 或 message" }, { status: 400 });
     }
 
     // Rate limit — 以 sessionId 或 guestId 為 key

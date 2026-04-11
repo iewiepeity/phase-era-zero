@@ -22,23 +22,28 @@ import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 // 勝利條件：兇手 + 動機方向 都正確（≥ 70 分）
 export async function POST(req: NextRequest) {
   try {
-    const {
-      sessionId,
-      accusedKillerId,
-      accusedMotive,
-      accusedSubMotive,
-      alreadyUnlockedAchievements = [],
-    } = (await req.json()) as {
+    const body = (await req.json()) as {
       sessionId:        string;
-      accusedKillerId:  KillerId;
-      accusedMotive:    MotiveDirection;
-      accusedSubMotive: SubMotiveId;
+      accusedKillerId?: KillerId;
+      suspectId?:       string;       // 相容簡易呼叫（等同 accusedKillerId）
+      accusedMotive?:   MotiveDirection;
+      accusedSubMotive?: SubMotiveId;
       alreadyUnlockedAchievements?: string[];
     };
 
-    if (!sessionId || !accusedKillerId || !accusedMotive || !accusedSubMotive) {
+    const {
+      sessionId,
+      accusedMotive,
+      accusedSubMotive,
+      alreadyUnlockedAchievements = [],
+    } = body;
+
+    // 相容 suspectId（簡易格式）與 accusedKillerId（完整格式）
+    const accusedKillerId = (body.accusedKillerId ?? body.suspectId) as KillerId | undefined;
+
+    if (!sessionId || !accusedKillerId) {
       return NextResponse.json(
-        { error: "bad_request", message: "缺少必要欄位：sessionId, accusedKillerId, accusedMotive, accusedSubMotive" },
+        { error: "bad_request", message: "缺少必要欄位：sessionId 與 accusedKillerId（或 suspectId）" },
         { status: 400 },
       );
     }
