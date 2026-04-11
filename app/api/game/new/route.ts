@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { abandonActiveSessions, createGameSession } from "@/lib/services/db";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { generateCase } from "@/lib/random-engine";
 import type { KillerId, MotiveDirection } from "@/lib/case-config";
 
@@ -21,16 +22,25 @@ export async function POST(req: NextRequest) {
     // 2. 廢棄舊 session 並建立新 session
     if (guestId) await abandonActiveSessions(guestId);
 
-    let sessionId = await createGameSession({
-      guestId:         guestId ?? "anonymous",
-      killerId:        config.killerId,
-      motiveDirection: config.motiveDirection,
-      truthString:     config.truthString,
-    });
+    let sessionId: string | null = null;
 
-    // 3. 若 DB 未設定，用本地 ID（無持久化，UI 仍可導航）
-    if (!sessionId) {
+    if (isSupabaseConfigured()) {
+      // 3a. 有 Supabase — 寫入 DB（失敗時拋出，讓 catch block 回傳明確錯誤）
+      sessionId = await createGameSession({
+        guestId:         guestId ?? "anonymous",
+        killerId:        config.killerId,
+        motiveDirection: config.motiveDirection,
+        truthString:     config.truthString,
+        subMotiveId:     config.subMotiveId,
+      });
+    } else {
+      // 3b. 無 Supabase — 純 local session（開發用 fallback）
       sessionId = `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      console.warn("[new] Supabase 未設定，使用 local session:", sessionId);
+    }
+
+    if (!sessionId) {
+      throw new Error("createGameSession 回傳 null，DB 寫入失敗");
     }
 
     // 4. 回傳（不含 truthString / 兇手身份）

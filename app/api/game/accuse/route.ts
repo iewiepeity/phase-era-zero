@@ -25,6 +25,7 @@ function buildLocalSession(sessionId: string) {
     killer_id:        killer,
     motive_direction: motive,
     truth_string:     `P${motive}0-${sub}-0000`,
+    sub_motive_id:    sub,
     player_name:      "local",
     status:           "active" as const,
     difficulty:       "normal",
@@ -82,9 +83,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. 從 truth_string 解析子動機（格式：P{motive}{killerIdx}-{subMotive}-{mmdd}-...）
-    const truthParts       = (session.truth_string ?? "").split("-");
-    const correctSubMotive = (truthParts[1] ?? null) as SubMotiveId | null;
+    // 2. 取得正確子動機：優先用 sub_motive_id 欄，次選 truth_string 解析
+    const correctSubMotive: SubMotiveId | null =
+      (session.sub_motive_id as SubMotiveId | null | undefined) ??
+      ((session.truth_string ?? "").split("-")[1] as SubMotiveId | null | undefined) ??
+      null;
 
     // 3. 判定結果
     const killerCorrect    = session.killer_id === accusedKillerId;

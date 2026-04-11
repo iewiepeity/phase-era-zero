@@ -3,7 +3,7 @@
  * 包含：Session CRUD、難度、身份、幕次、分數
  */
 
-import { createServerSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { createServerSupabase, isSupabaseConfigured, requireSupabase } from "@/lib/supabase";
 import type { KillerId, MotiveDirection, CaseConfig } from "@/lib/case-config";
 
 export async function ensureSession(guestId: string): Promise<string | null> {
@@ -59,8 +59,9 @@ export async function createGameSession(params: {
   killerId:         KillerId;
   motiveDirection:  MotiveDirection;
   truthString?:     string;
+  subMotiveId?:     string;
 }): Promise<string | null> {
-  if (!isSupabaseConfigured()) return null;
+  requireSupabase("createGameSession");
   try {
     const db = createServerSupabase();
     const { data, error } = await db
@@ -70,19 +71,19 @@ export async function createGameSession(params: {
         killer_id:        params.killerId,
         motive_direction: params.motiveDirection,
         truth_string:     params.truthString ?? null,
+        sub_motive_id:    params.subMotiveId  ?? null,
         status:           "active",
       })
       .select("id")
       .single();
 
     if (error) {
-      console.error("[db-game] createGameSession:", error.message);
-      return null;
+      throw new Error(`[db-game] createGameSession DB error: ${error.message} (code=${error.code})`);
     }
     return data.id;
   } catch (e) {
-    console.error("[db-game] createGameSession:", e);
-    return null;
+    // re-throw so new/route.ts catch block surfaces the real error
+    throw e;
   }
 }
 
@@ -93,16 +94,17 @@ export async function getGameSession(sessionId: string): Promise<{
   player_name:      string;
   status:           string;
   truth_string?:    string;
+  sub_motive_id?:   string;
   difficulty?:      string;
   player_identity?: string;
   current_act?:     number;
 } | null> {
-  if (!isSupabaseConfigured()) return null;
+  if (!isSupabaseConfigured()) return null;   // accuse route handles local_ fallback
   try {
     const db = createServerSupabase();
     const { data, error } = await db
       .from("game_sessions")
-      .select("id, killer_id, motive_direction, player_name, status, truth_string, difficulty, player_identity, current_act")
+      .select("id, killer_id, motive_direction, player_name, status, truth_string, sub_motive_id, difficulty, player_identity, current_act")
       .eq("id", sessionId)
       .single();
     if (error) return null;

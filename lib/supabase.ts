@@ -20,8 +20,27 @@ export function createServerSupabase() {
 
 /** 快速檢查 Supabase 環境變數是否已設定 */
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const ok   = Boolean(url && key);
+  if (!ok && process.env.NODE_ENV !== "production") {
+    console.warn(
+      "[supabase] isSupabaseConfigured=false  " +
+      `URL=${url ? "SET" : "MISSING"}  KEY=${key ? "SET" : "MISSING"}`,
+    );
+  }
+  return ok;
+}
+
+/**
+ * 若 Supabase 未設定則拋出例外（用於必須有 DB 的 API）。
+ * 比靜默 return null 更容易發現設定問題。
+ */
+export function requireSupabase(context: string): void {
+  if (!isSupabaseConfigured()) {
+    throw new Error(
+      `[supabase] ${context}: Supabase 未設定，請確認 .env.local 中有 ` +
+      `NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY。`,
+    );
+  }
 }
