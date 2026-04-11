@@ -111,10 +111,22 @@ export async function addPlayerClue(
     category?:     "relationship" | "motive" | "method" | "alibi" | "general";
   },
 ): Promise<PlayerClue | null> {
-  if (!isSupabaseConfigured()) return null;
+  const clue_id = `clue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  if (!isSupabaseConfigured()) {
+    return {
+      id:            clue_id,
+      session_id:    sessionId,
+      clue_id,
+      clue_text:     clue.clue_text,
+      clue_type:     clue.clue_type,
+      source_npc:    clue.source_npc    ?? null,
+      source_scene:  clue.source_scene  ?? null,
+      category:      clue.category      ?? "general",
+      discovered_at: new Date().toISOString(),
+    };
+  }
   try {
     const db = createServerSupabase();
-    const clue_id = `clue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
     const { data, error } = await db
       .from("player_clues")
       .insert({

@@ -4,7 +4,7 @@
  */
 
 import { createServerSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { KillerId, MotiveDirection, CaseConfig } from "@/lib/case-config";
+import type { KillerId, MotiveDirection, CaseConfig, SubMotiveId, TruthElementCode } from "@/lib/case-config";
 
 export async function ensureSession(guestId: string): Promise<string | null> {
   if (!isSupabaseConfigured()) return null;
@@ -188,20 +188,28 @@ export async function getCaseConfig(sessionId: string): Promise<CaseConfig | nul
     const db = createServerSupabase();
     const { data } = await db
       .from("game_sessions")
-      .select("killer_id, motive_direction, created_at")
+      .select("killer_id, motive_direction, truth_string, created_at")
       .eq("id", sessionId)
       .maybeSingle();
 
     if (!data?.killer_id || !data?.motive_direction) return null;
 
+    // 解析 truth_string 格式：P{motive}{killerIdx}-{subMotive}-{mmdd}-{seed}-{relationship}-{elements}
+    const truthParts   = (data.truth_string ?? "").split("-");
+    const subMotiveId  = (truthParts[1] as SubMotiveId | undefined) ?? "A1";
+    const seed         = parseInt(truthParts[3] ?? "0", 10) || 0;
+    const relationship = (truthParts[4] ?? "R1") as CaseConfig["relationship"];
+    const elemStr      = truthParts[5] ?? "D1";
+    const elements     = (elemStr.match(/D\d+/g) ?? ["D1"]) as [TruthElementCode, ...TruthElementCode[]];
+
     return {
       killerId:        data.killer_id as KillerId,
       motiveDirection: data.motive_direction as MotiveDirection,
-      subMotiveId:     "A1",
-      relationship:    "R1",
-      elements:        ["D1"],
-      truthString:     "",
-      seed:            0,
+      subMotiveId,
+      relationship,
+      elements:        elements as CaseConfig["elements"],
+      truthString:     data.truth_string ?? "",
+      seed,
       generatedAt:     data.created_at ?? new Date().toISOString(),
     } satisfies CaseConfig;
   } catch {

@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：npcId" }, { status: 400 });
     }
 
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "bad_request", message: "messages 不可為空" }, { status: 400 });
+    }
+
     // Rate limit — 以 sessionId 或 guestId 為 key
     const rlKey = sessionId ?? guestId ?? req.headers.get("x-forwarded-for") ?? "anon";
     const rl    = checkRateLimit(rlKey);

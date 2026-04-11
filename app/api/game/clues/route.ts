@@ -43,7 +43,20 @@ export async function POST(req: NextRequest) {
       category,
     });
 
-    return NextResponse.json({ clue });
+    // DB 未配置或 session 為本地 ID 時，回傳本地構建的線索物件
+    const result = clue ?? {
+      id:            `clue_local_${Date.now().toString(36)}`,
+      session_id:    sessionId,
+      clue_id:       `clue_local_${Date.now().toString(36)}`,
+      clue_text,
+      clue_type,
+      source_npc:    source_npc    ?? null,
+      source_scene:  source_scene  ?? null,
+      category:      category      ?? "general",
+      discovered_at: new Date().toISOString(),
+    };
+
+    return NextResponse.json({ clue: result });
   } catch (err) {
     console.error("[POST /api/game/clues]", err);
     const msg = err instanceof Error ? err.message : "Internal server error";

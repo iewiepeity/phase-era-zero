@@ -90,13 +90,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 幕次推進檢查（A5）
+    // 載入進度資料（幕次推進與成就皆需要）
+    const [clueIds, talkedNpcs] = await Promise.all([
+      getCollectedClueIds(sessionId),
+      getTalkedNpcs(sessionId),
+    ]);
+
+    // 幕次推進檢查（A5，僅 Act 1 → Act 2）
     let actProgression: { advanced: boolean; newAct: number; unlockedScenes?: string[] } | null = null;
     if (currentAct < 2) {
-      const [clueIds, talkedNpcs] = await Promise.all([
-        getCollectedClueIds(sessionId),
-        getTalkedNpcs(sessionId),
-      ]);
       const criticalCount = await getCriticalClueCount(sessionId);
       const progression   = checkActProgression(currentAct, criticalCount, talkedNpcs.length);
       if (progression.advanced) {
@@ -107,26 +109,24 @@ export async function POST(req: NextRequest) {
           unlockedScenes: progression.unlockedScenes,
         };
       }
-
-      // 成就解鎖檢查（A2）
-      const newAchievements = checkAndUnlockAchievements(
-        {
-          clueCount:       clueIds.length + (discoveredClue ? 1 : 0),
-          visitedSceneIds: [...new Set([...visitedSceneIds, sceneId])],
-          talkedNpcCount:  talkedNpcs.length,
-        },
-        alreadyUnlockedAchievements,
-      );
-
-      return NextResponse.json({
-        ok: true,
-        discoveredClue,
-        actProgression,
-        newAchievements: newAchievements.map((a) => ({ id: a.id, name: a.name })),
-      });
     }
 
-    return NextResponse.json({ ok: true, discoveredClue, actProgression: null, newAchievements: [] });
+    // 成就解鎖檢查（A2，所有幕次皆執行）
+    const newAchievements = checkAndUnlockAchievements(
+      {
+        clueCount:       clueIds.length + (discoveredClue ? 1 : 0),
+        visitedSceneIds: [...new Set([...visitedSceneIds, sceneId])],
+        talkedNpcCount:  talkedNpcs.length,
+      },
+      alreadyUnlockedAchievements,
+    );
+
+    return NextResponse.json({
+      ok: true,
+      discoveredClue,
+      actProgression,
+      newAchievements: newAchievements.map((a) => ({ id: a.id, name: a.name })),
+    });
   } catch (err) {
     console.error("[POST /api/game/scene/interactions]", err);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
