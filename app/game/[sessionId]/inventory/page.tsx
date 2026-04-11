@@ -89,7 +89,7 @@ export default function InventoryPage() {
         {/* 空狀態 */}
         {!loading && items.length === 0 && (
           <div className="flex flex-col items-center py-16 gap-3">
-            <span className="text-3xl opacity-30">📦</span>
+            <span className="w-8 h-8 rounded border border-[#e2c9a0]/15" />
             <p
               className="text-sm text-[#e2c9a0]/30 text-center"
               style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
@@ -122,7 +122,7 @@ export default function InventoryPage() {
                   className="shrink-0 w-10 h-10 rounded flex items-center justify-center text-lg"
                   style={{ background: "rgba(226,201,160,0.06)" }}
                 >
-                  {item.icon ?? "📦"}
+                  <span className="w-5 h-5 rounded-sm border border-[#e2c9a0]/20" />
                 </div>
 
                 {/* 內容 */}

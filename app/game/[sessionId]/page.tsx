@@ -330,7 +330,7 @@ export default function GameHubPage() {
                   className="absolute bottom-2 right-2 font-mono-sys text-[8px] tracking-widest px-2 py-1 rounded-sm border border-[#5bb8ff]/18 text-[#5bb8ff]/40 hover:border-[#5bb8ff]/40 hover:text-[#5bb8ff]/70 transition-all"
                   style={{ background: "rgba(13,17,23,0.90)" }}
                 >
-                  💬 對話
+                  [對話]
                 </button>
               )}
             </div>
@@ -357,27 +357,36 @@ export default function GameHubPage() {
       {/* 快速導覽列 */}
       <div className="px-4 pb-4 flex items-center justify-center gap-4 border-t border-[#e2c9a0]/4 pt-3 overflow-x-auto">
         <Link href={`/game/${sessionId}/map`}       className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🗺</span>
+          <span className="w-4 h-4 rounded border border-[#e2c9a0]/20 group-hover:border-[#e2c9a0]/50 transition-colors flex items-center justify-center">
+            <span className="w-2 h-2 rounded-sm bg-[#e2c9a0]/25 group-hover:bg-[#e2c9a0]/55 transition-colors" />
+          </span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">地圖</span>
         </Link>
         <Link href={`/game/${sessionId}/clues`}     className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🔍</span>
+          <span className="w-0 h-0 border-l-[7px] border-r-[7px] border-b-[12px] border-l-transparent border-r-transparent border-b-[#e2c9a0]/25 group-hover:border-b-[#e2c9a0]/55 transition-colors" />
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">線索</span>
         </Link>
         <Link href={`/game/${sessionId}/inventory`} className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🎒</span>
+          <span className="w-4 h-4 border border-[#e2c9a0]/25 group-hover:border-[#e2c9a0]/55 transition-colors rounded-sm" />
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">道具</span>
         </Link>
         <Link href={`/game/${sessionId}/notebook`}  className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">📓</span>
+          <span className="w-3 h-4 border border-[#e2c9a0]/25 group-hover:border-[#e2c9a0]/55 transition-colors rounded-sm flex flex-col justify-center gap-0.5 px-0.5">
+            <span className="h-px bg-[#e2c9a0]/25 group-hover:bg-[#e2c9a0]/55 transition-colors w-full rounded" />
+            <span className="h-px bg-[#e2c9a0]/25 group-hover:bg-[#e2c9a0]/55 transition-colors w-full rounded" />
+          </span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">筆記</span>
         </Link>
         <Link href={`/game/${sessionId}/chat-log`}  className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">💬</span>
+          <span className="w-4 h-3.5 border border-[#e2c9a0]/25 group-hover:border-[#e2c9a0]/55 transition-colors rounded-t flex items-center justify-center">
+            <span className="w-1.5 h-px bg-[#e2c9a0]/25 group-hover:bg-[#e2c9a0]/55 transition-colors" />
+          </span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">對話</span>
         </Link>
         <Link href={`/game/${sessionId}/settings`}  className="flex flex-col items-center gap-0.5 group shrink-0">
-          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">⚙️</span>
+          <span className="w-4 h-4 rounded-full border border-[#e2c9a0]/25 group-hover:border-[#e2c9a0]/55 transition-colors flex items-center justify-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#e2c9a0]/25 group-hover:bg-[#e2c9a0]/55 transition-colors" />
+          </span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">設定</span>
         </Link>
       </div>

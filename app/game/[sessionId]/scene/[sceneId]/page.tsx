@@ -45,6 +45,42 @@ function useTypewriter(text: string, speed = 20, enabled = true) {
   return { displayed, done };
 }
 
+// ── CSS icon by type (no emoji) ───────────────────────────────
+
+function ItemTypeIcon({ type, accentColor }: { type: SceneItem["type"]; accentColor: string }) {
+  if (type === "npc") {
+    return (
+      <span
+        className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
+        style={{ borderColor: accentColor, background: `${accentColor}20` }}
+      />
+    );
+  }
+  if (type === "item") {
+    return (
+      <span
+        className="w-4 h-4 rounded-sm border shrink-0"
+        style={{ borderColor: "#f59e0b", background: "#f59e0b20" }}
+      />
+    );
+  }
+  if (type === "clue") {
+    return (
+      <span
+        className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] shrink-0"
+        style={{ borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: "#ff3864" }}
+      />
+    );
+  }
+  // environment
+  return (
+    <span
+      className="w-4 h-4 rounded-full border shrink-0"
+      style={{ borderColor: "#5bb8ff", background: "#5bb8ff10" }}
+    />
+  );
+}
+
 // ── Group items by type ────────────────────────────────────────
 
 const TYPE_ORDER: SceneItem["type"][] = ["npc", "item", "clue", "environment"];
@@ -63,6 +99,9 @@ const TYPE_ACCENT: Record<SceneItem["type"], string> = {
   environment: "#5bb8ff",
 };
 
+// Items visible by default (no investigation needed)
+const ALWAYS_VISIBLE: SceneItem["type"][] = ["npc"];
+
 // ── Main Page ──────────────────────────────────────────────────
 
 export default function ScenePage() {
@@ -78,11 +117,15 @@ export default function ScenePage() {
 
   // State
   const [interactedItems, setInteractedItems] = useState<Set<string>>(new Set());
+  // Items revealed through investigation (persisted in localStorage)
+  const [discoveredItems, setDiscoveredItems] = useState<Set<string>>(new Set());
   const [activeItem,      setActiveItem]      = useState<SceneItem | null>(null);
   const [actionDone,      setActionDone]      = useState(false);
   const [introShown,      setIntroShown]      = useState(false);
   const [skipIntro,       setSkipIntro]       = useState(false);
   const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
+  const [investigating,   setInvestigating]   = useState(false);
+  const [justDiscovered,  setJustDiscovered]  = useState<string[]>([]);
 
   // Atmosphere intro text
   const atmosphereText = SCENE_ATMOSPHERE[sceneId] ?? "";
@@ -92,13 +135,25 @@ export default function ScenePage() {
     !skipIntro && !introShown,
   );
 
+  // Non-NPC items that can be discovered through investigation
+  const investigatableItems = items.filter((i) => !ALWAYS_VISIBLE.includes(i.type));
+  const undiscoveredItems   = investigatableItems.filter((i) => !discoveredItems.has(i.id));
+  const allDiscovered       = undiscoveredItems.length === 0 && investigatableItems.length > 0;
+
+  const discoveredStorageKey = `pez_discovered_${sessionId}_${sceneId}`;
+
   // On mount: load state + record visit + sync DB
   useEffect(() => {
-    // Load localStorage
+    // Load interacted items
     const key = STORAGE_KEYS.SCENE_INTERACTED(sessionId, sceneId);
     const raw = localStorage.getItem(key) ?? "";
     const ids = new Set(raw.split(",").filter(Boolean));
     setInteractedItems(ids);
+
+    // Load discovered items
+    const discoveredRaw = localStorage.getItem(discoveredStorageKey) ?? "";
+    const discoveredIds = new Set(discoveredRaw.split(",").filter(Boolean));
+    setDiscoveredItems(discoveredIds);
 
     // Record scene visit
     fetch("/api/game/scene/visits", {
@@ -119,6 +174,7 @@ export default function ScenePage() {
         }
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, sceneId]);
 
   // Auto-advance intro after it finishes
@@ -142,6 +198,32 @@ export default function ScenePage() {
     [sessionId, sceneId],
   );
 
+  // Investigation: reveal 1-2 random undiscovered items
+  function handleInvestigate() {
+    if (investigating || undiscoveredItems.length === 0) return;
+    setInvestigating(true);
+
+    // Deterministic shuffle based on current count so each call reveals different items
+    const shuffled = [...undiscoveredItems].sort(
+      () => (Math.sin(Date.now() % 997) > 0 ? 1 : -1)
+    );
+    const toReveal  = shuffled.slice(0, Math.min(2, shuffled.length));
+    const newlyFound = toReveal.map((i) => i.id);
+
+    setDiscoveredItems((prev) => {
+      const next = new Set(prev);
+      newlyFound.forEach((id) => next.add(id));
+      localStorage.setItem(discoveredStorageKey, [...next].join(","));
+      return next;
+    });
+    setJustDiscovered(newlyFound);
+
+    setTimeout(() => {
+      setJustDiscovered([]);
+      setInvestigating(false);
+    }, 2000);
+  }
+
   function handleItemClick(item: SceneItem) {
     setActiveItem(item);
     setActionDone(false);
@@ -161,10 +243,8 @@ export default function ScenePage() {
       item.triggersClue          ? "discover":
                                    "examine";
 
-    // Mark interacted
     markInteracted(item.id);
 
-    // Persist to DB
     fetch("/api/game/scene/interactions", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
@@ -172,17 +252,12 @@ export default function ScenePage() {
     }).catch(() => {});
 
     if (item.type === "npc" && item.npcId) {
-      // Navigate directly to chat
       router.push(`/game/${sessionId}/chat/${item.npcId}`);
       return;
     }
 
     setActionDone(true);
-
-    // Auto-close after 1.5s
-    setTimeout(() => {
-      closeModal();
-    }, 1500);
+    setTimeout(() => { closeModal(); }, 1500);
   }
 
   function getActionLabel(item: SceneItem): string {
@@ -214,14 +289,23 @@ export default function ScenePage() {
     router.push(`/game/${sessionId}/map`);
   }
 
-  // Group items
+  // Filter items to display: NPCs always, others only if discovered
+  function isVisible(item: SceneItem): boolean {
+    if (ALWAYS_VISIBLE.includes(item.type)) return true;
+    return discoveredItems.has(item.id);
+  }
+
+  // Group items — only visible ones
   const grouped = TYPE_ORDER.reduce(
     (acc, type) => {
-      acc[type] = items.filter((i) => i.type === type);
+      acc[type] = items.filter((i) => i.type === type && isVisible(i));
       return acc;
     },
     {} as Record<SceneItem["type"], SceneItem[]>,
   );
+
+  // Total interacted across visible items
+  const visibleItems = items.filter(isVisible);
 
   if (!scene) {
     return (
@@ -243,17 +327,12 @@ export default function ScenePage() {
       >
         <div className="fixed inset-0 bg-grid-static opacity-30 pointer-events-none" aria-hidden="true" />
         <div className="relative z-10 max-w-sm w-full">
-          <p
-            className="font-mono-sys text-[9px] tracking-[0.4em] text-[#e2c9a0]/25 mb-6 uppercase"
-          >
+          <p className="font-mono-sys text-[9px] tracking-[0.4em] text-[#e2c9a0]/25 mb-6 uppercase">
             {scene.district}
           </p>
           <h1
             className="text-xl tracking-widest mb-8"
-            style={{
-              fontFamily: "var(--font-noto-serif-tc), serif",
-              color:      palette.accent,
-            }}
+            style={{ fontFamily: "var(--font-noto-serif-tc), serif", color: palette.accent }}
           >
             {scene.name}
           </h1>
@@ -302,10 +381,7 @@ export default function ScenePage() {
           </p>
           <h1
             className="text-xl tracking-widest"
-            style={{
-              fontFamily: "var(--font-noto-serif-tc), serif",
-              color:      palette.accent,
-            }}
+            style={{ fontFamily: "var(--font-noto-serif-tc), serif", color: palette.accent }}
           >
             {scene.name}
           </h1>
@@ -317,21 +393,64 @@ export default function ScenePage() {
           </p>
         </div>
 
-        {/* Explored progress */}
-        <div className="flex items-center gap-3 mb-8">
+        {/* Explored progress — based on visible items only */}
+        <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-[#e2c9a0]/06 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{
-                width:      `${(interactedItems.size / Math.max(items.length, 1)) * 100}%`,
+                width:      `${(interactedItems.size / Math.max(visibleItems.length, 1)) * 100}%`,
                 background: palette.accent,
                 opacity:    0.4,
               }}
             />
           </div>
           <span className="font-mono-sys text-[9px] tracking-widest shrink-0" style={{ color: `${palette.accent}60` }}>
-            {interactedItems.size}/{items.length}
+            {interactedItems.size}/{visibleItems.length}
           </span>
+        </div>
+
+        {/* Investigation button */}
+        <div className="mb-8">
+          <button
+            onClick={handleInvestigate}
+            disabled={investigating || allDiscovered}
+            className="w-full py-3 rounded border font-mono-sys text-[10px] tracking-[0.3em] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderColor: allDiscovered ? "rgba(74,222,128,0.25)" : `${palette.accent}35`,
+              color:        allDiscovered ? "rgba(74,222,128,0.60)" : `${palette.accent}70`,
+              background:   allDiscovered ? "rgba(74,222,128,0.05)" : `${palette.accent}08`,
+            }}
+          >
+            {investigating
+              ? "搜查中..."
+              : allDiscovered
+              ? "[ 此區域已全面搜查 ]"
+              : undiscoveredItems.length === investigatableItems.length
+              ? "[ 調查此區域 ]"
+              : `[ 繼續搜查 — 還有 ${undiscoveredItems.length} 處未發現 ]`}
+          </button>
+
+          {/* Newly discovered notification */}
+          {justDiscovered.length > 0 && (
+            <div className="mt-2 px-3 py-2 rounded border border-[#f59e0b]/25 bg-[#f59e0b]/05 animate-fade-in">
+              <p className="font-mono-sys text-[9px] tracking-[0.3em] text-[#f59e0b]/60 mb-1">
+                發現新物件
+              </p>
+              {justDiscovered.map((id) => {
+                const found = items.find((i) => i.id === id);
+                return found ? (
+                  <p
+                    key={id}
+                    className="text-xs text-[#e2c9a0]/65"
+                    style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  >
+                    · {found.name}
+                  </p>
+                ) : null;
+              })}
+            </div>
+          )}
         </div>
 
         {/* Action suggestions */}
@@ -366,16 +485,23 @@ export default function ScenePage() {
                     {TYPE_LABELS[type]}
                   </span>
                   <span className="flex-1 h-px" style={{ background: `${accent || "rgba(226,201,160,0.06)"}30` }} />
+                  {type !== "npc" && (
+                    <span
+                      className="font-mono-sys text-[8px] tracking-widest animate-fade-in"
+                      style={{ color: `${accent}50` }}
+                    >
+                      [已發現]
+                    </span>
+                  )}
                 </div>
 
                 {/* Item cards */}
                 <div className="space-y-2">
                   {group.map((item) => {
                     const interacted = interactedItems.has(item.id);
+                    const isNew      = justDiscovered.includes(item.id);
                     const npcColor   = item.npcId ? (NPC_COLORS[item.npcId] ?? DEFAULT_NPC_COLOR) : null;
-                    const cardAccent = type === "npc" && npcColor
-                      ? npcColor.dot
-                      : accent;
+                    const cardAccent = type === "npc" && npcColor ? npcColor.dot : accent;
 
                     return (
                       <button
@@ -384,25 +510,34 @@ export default function ScenePage() {
                         onClick={() => handleItemClick(item)}
                         className="w-full text-left px-4 py-3 rounded border transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center gap-3"
                         style={{
-                          borderColor: highlightedItem === item.id
+                          borderColor: isNew
+                            ? `${cardAccent}80`
+                            : highlightedItem === item.id
                             ? `${cardAccent}70`
                             : interacted
                             ? `${cardAccent}20`
                             : `${cardAccent}30`,
-                          background: highlightedItem === item.id
+                          background: isNew
+                            ? `${cardAccent}18`
+                            : highlightedItem === item.id
                             ? `${cardAccent}14`
                             : interacted
                             ? "rgba(13,17,23,0.5)"
                             : "rgba(13,17,23,0.8)",
                           opacity: interacted && item.oneTimeOnly ? 0.45 : 1,
-                          boxShadow: highlightedItem === item.id
+                          boxShadow: isNew
+                            ? `0 0 16px ${cardAccent}30`
+                            : highlightedItem === item.id
                             ? `0 0 12px ${cardAccent}30`
                             : undefined,
                         }}
                       >
-                        {/* Icon */}
-                        <span className="text-lg leading-none shrink-0" style={{ opacity: interacted ? 0.5 : 1 }}>
-                          {item.icon}
+                        {/* CSS icon */}
+                        <span className="shrink-0 flex items-center justify-center w-6" style={{ opacity: interacted ? 0.5 : 1 }}>
+                          <ItemTypeIcon
+                            type={item.type}
+                            accentColor={type === "npc" && npcColor ? npcColor.dot : accent || "rgba(226,201,160,0.5)"}
+                          />
                         </span>
 
                         {/* Text */}
@@ -412,7 +547,7 @@ export default function ScenePage() {
                               className="text-sm leading-snug truncate"
                               style={{
                                 fontFamily: "var(--font-noto-serif-tc), serif",
-                                color:      interacted
+                                color: interacted
                                   ? "rgba(226,201,160,0.35)"
                                   : "rgba(226,201,160,0.80)",
                               }}
@@ -420,8 +555,8 @@ export default function ScenePage() {
                               {item.name}
                             </p>
                             {interacted && (
-                              <span className="text-[10px] shrink-0" style={{ color: `${cardAccent}70` }}>
-                                ✓
+                              <span className="font-mono-sys text-[10px] shrink-0" style={{ color: `${cardAccent}70` }}>
+                                [v]
                               </span>
                             )}
                           </div>
@@ -455,7 +590,7 @@ export default function ScenePage() {
           })}
         </div>
 
-        {/* Random NPC section — 路人 */}
+        {/* Random NPC section — 路人 (always visible) */}
         {randomNpcs.length > 0 && (
           <section className="mt-2">
             <div className="flex items-center gap-2 mb-3">
@@ -473,12 +608,10 @@ export default function ScenePage() {
                   key={rNpc.id}
                   onClick={() => router.push(`/game/${sessionId}/chat/${rNpc.id}`)}
                   className="w-full text-left px-4 py-3 rounded border transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center gap-3"
-                  style={{
-                    borderColor: "rgba(226,201,160,0.10)",
-                    background:  "rgba(13,17,23,0.6)",
-                  }}
+                  style={{ borderColor: "rgba(226,201,160,0.10)", background: "rgba(13,17,23,0.6)" }}
                 >
-                  <span className="text-lg leading-none shrink-0 opacity-60">{rNpc.icon}</span>
+                  {/* Person dot */}
+                  <span className="w-5 h-5 rounded-full border-2 border-[#e2c9a0]/20 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p
@@ -539,7 +672,16 @@ export default function ScenePage() {
 
             {/* Item header */}
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl leading-none">{activeItem.icon}</span>
+              <span className="shrink-0">
+                <ItemTypeIcon
+                  type={activeItem.type}
+                  accentColor={
+                    activeItem.type === "npc" && activeItem.npcId
+                      ? (NPC_COLORS[activeItem.npcId] ?? DEFAULT_NPC_COLOR).dot
+                      : TYPE_ACCENT[activeItem.type] || "rgba(226,201,160,0.5)"
+                  }
+                />
+              </span>
               <div>
                 <h2
                   className="text-base tracking-widest text-[#e2c9a0]/85"
@@ -565,12 +707,9 @@ export default function ScenePage() {
             {actionDone ? (
               <div
                 className="flex items-center gap-2 px-4 py-3 rounded border"
-                style={{
-                  borderColor: `${palette.accent}30`,
-                  background:  `${palette.accent}08`,
-                }}
+                style={{ borderColor: `${palette.accent}30`, background: `${palette.accent}08` }}
               >
-                <span className="text-sm" style={{ color: palette.accent }}>✓</span>
+                <span className="font-mono-sys text-[10px]" style={{ color: palette.accent }}>[v]</span>
                 <p
                   className="text-sm text-[#e2c9a0]/60"
                   style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
