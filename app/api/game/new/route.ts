@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       guestId:         guestId ?? "anonymous",
       killerId:        config.killerId,
       motiveDirection: config.motiveDirection,
+      truthString:     config.truthString,
     });
 
     // 3. 若 DB 未設定，用本地 ID（無持久化，UI 仍可導航）

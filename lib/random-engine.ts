@@ -6,6 +6,7 @@
 import {
   type KillerId,
   type MotiveDirection,
+  type SubMotiveId,
   type RelationshipCode,
   type TruthElementCode,
   type CaseConfig,
@@ -16,6 +17,7 @@ import {
   RELATIONSHIPS,
   TRUTH_ELEMENTS,
   getAllValidPairs,
+  getSubMotivesForDirection,
 } from "./case-config";
 
 import type { Clue }           from "./npc-registry";
@@ -105,6 +107,10 @@ export function validateCase(config: CaseConfig): { valid: boolean; reasons: str
     );
   }
 
+  if (!config.subMotiveId || !config.subMotiveId.startsWith(config.motiveDirection)) {
+    reasons.push(`子動機 ${config.subMotiveId} 與動機方向 ${config.motiveDirection} 不符`);
+  }
+
   const required = REQUIRED_ELEMENTS[config.killerId]?.[config.motiveDirection] ?? [];
   for (const req of required) {
     if (!config.elements.includes(req as TruthElementCode)) {
@@ -119,22 +125,23 @@ export function validateCase(config: CaseConfig): { valid: boolean; reasons: str
   return { valid: reasons.length === 0, reasons };
 }
 
-// ── 真相字串格式：P{route}{killer_idx}{motive}-{mmdd}-{act}-{rel}-{elem1}{elem2} ──
-// 例：PA3B-0410-1-R7-D2M5
-// Phase 3 完整版格式留作 Phase 3 說明，此處用簡化版供 MVP 使用
+// ── 真相字串格式：P{motive}{killer_idx}-{subMotive}-{mmdd}-{seed%9999}-{rel}-{elems} ──
+// 例：PA3-A1-0411-5678-R7-D2
+// subMotive 為第 2 段（split('-')[1]），供 accuse/route.ts 解析
 function buildTruthString(
-  killerId: KillerId,
-  motive: MotiveDirection,
+  killerId:    KillerId,
+  motive:      MotiveDirection,
+  subMotiveId: SubMotiveId,
   relationship: RelationshipCode,
-  elements: CaseConfig["elements"],
-  seed: number
+  elements:    CaseConfig["elements"],
+  seed:        number
 ): string {
   const killerIdx = Object.keys(SUSPECTS).indexOf(killerId) + 1;
-  const date = new Date();
-  const mmdd = String(date.getMonth() + 1).padStart(2, "0") +
-               String(date.getDate()).padStart(2, "0");
+  const date  = new Date();
+  const mmdd  = String(date.getMonth() + 1).padStart(2, "0") +
+                String(date.getDate()).padStart(2, "0");
   const elemStr = elements.join("");
-  return `P${motive}${killerIdx}${motive}-${mmdd}-${seed % 9999}-${relationship}-${elemStr}`;
+  return `P${motive}${killerIdx}-${subMotiveId}-${mmdd}-${seed % 9999}-${relationship}-${elemStr}`;
 }
 
 // ── 主函式：generateCase() ────────────────────────────────────
@@ -170,6 +177,11 @@ export function generateCase(options: GenerateCaseOptions = {}): CaseConfig {
   // 2. 隨機選關係代碼
   const relationship = pickRandom(RELATIONSHIPS, rand) as RelationshipCode;
 
+  // 2b. 隨機選子動機
+  const subMotiveOptions = getSubMotivesForDirection(motiveDirection);
+  const subMotive        = pickRandom(subMotiveOptions, rand);
+  const subMotiveId      = subMotive.id as SubMotiveId;
+
   // 3. 隨機選 1–2 個真相輔助元素
   // 白秋 + B 必須包含 element_05（轉為 D5）
   const requiredElems = (REQUIRED_ELEMENTS[killerId]?.[motiveDirection] ?? []) as TruthElementCode[];
@@ -182,11 +194,12 @@ export function generateCase(options: GenerateCaseOptions = {}): CaseConfig {
     : [pickRandom(TRUTH_ELEMENTS, rand) as TruthElementCode];
 
   // 4. 組裝
-  const truthString = buildTruthString(killerId, motiveDirection, relationship, safeElements, seed);
+  const truthString = buildTruthString(killerId, motiveDirection, subMotiveId, relationship, safeElements, seed);
 
   const config: CaseConfig = {
     killerId,
     motiveDirection,
+    subMotiveId,
     relationship,
     elements: safeElements,
     truthString,

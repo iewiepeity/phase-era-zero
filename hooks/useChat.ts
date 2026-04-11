@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getNpc } from "@/lib/npc-registry";
+import { getNpcGreeting } from "@/lib/content/narrative";
 import { NPC_TYPING_MS } from "@/lib/constants";
 import type { UiMessage, NpcStateUI, ChatErrorKind } from "@/lib/types";
 
@@ -65,8 +66,7 @@ export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
   }
 
   function getGreeting(): string {
-    if (npcId === "chen_jie") return "坐啊，要吃什麼？今天的湯麵不錯。";
-    return "……";
+    return getNpcGreeting(npcId);
   }
 
   // ── 載入歷史 ───────────────────────────────────────────────
@@ -177,12 +177,13 @@ export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
       if (!res.ok) {
         const kind: ChatErrorKind = data.error === "rate_limit" ? "rate_limit" : "server_error";
         setErrorKind(kind);
+        const npcName = npc?.name ?? "對方";
         setMessages((prev) => [
           ...prev,
           makeNpcMsg(
             kind === "rate_limit"
-              ? "（陳姐暫時沒空，你等一下再來。）"
-              : "（陳姐好像在想什麼，沒有回應。）",
+              ? `（${npcName}暫時沒有空，稍後再試。）`
+              : `（${npcName}沉默著，沒有說話。）`,
             false,
           ),
         ]);
@@ -200,7 +201,7 @@ export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
       setErrorKind("network");
       setMessages((prev) => [
         ...prev,
-        makeNpcMsg("（店裡訊號不好，聲音斷了。）", false),
+        makeNpcMsg("（訊號斷了，什麼都沒聽到。）", false),
       ]);
     } finally {
       setSending(false);
@@ -219,7 +220,7 @@ export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
     return msg.isTyping ? msg.content.slice(0, msg.typedLength ?? 0) : msg.content;
   }
 
-  void npc; // npc 供未來擴展使用（不同 NPC 可有不同預設行為）
+  void npc;
 
   return {
     messages,

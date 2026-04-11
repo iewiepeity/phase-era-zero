@@ -186,6 +186,37 @@ export default function GameHubPage() {
           我有答案了 →
         </button>
       </div>
+
+      {/* 快速導覽列 */}
+      <div className="px-4 pb-4 flex items-center justify-center gap-6 border-t border-[#e2c9a0]/4 pt-3">
+        <Link
+          href={`/game/${sessionId}/map`}
+          className="flex flex-col items-center gap-0.5 group"
+        >
+          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🗺</span>
+          <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">
+            地圖
+          </span>
+        </Link>
+        <Link
+          href={`/game/${sessionId}/clues`}
+          className="flex flex-col items-center gap-0.5 group"
+        >
+          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🔍</span>
+          <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">
+            線索
+          </span>
+        </Link>
+        <Link
+          href={`/game/${sessionId}/inventory`}
+          className="flex flex-col items-center gap-0.5 group"
+        >
+          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">🎒</span>
+          <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">
+            道具
+          </span>
+        </Link>
+      </div>
     </div>
   );
 }

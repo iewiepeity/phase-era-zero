@@ -3,19 +3,20 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { SUSPECTS, MOTIVES } from "@/lib/case-config";
+import { SUSPECTS, MOTIVES, SUB_MOTIVES } from "@/lib/case-config";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { WIN_TEXTS, LOSE_KILLER_TEXTS, LOSE_MOTIVE_TEXTS } from "@/lib/content/endings";
-import type { KillerId, MotiveDirection } from "@/lib/case-config";
+import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
 interface AccuseResult {
-  correct:        boolean;
-  killerCorrect:  boolean;
-  motiveCorrect:  boolean;
-  score:          number;
-  result:         "win" | "lose";
-  answer:         { killerId: KillerId; motiveDirection: MotiveDirection };
+  correct:          boolean;
+  killerCorrect:    boolean;
+  motiveCorrect:    boolean;
+  subMotiveCorrect: boolean;
+  score:            number;
+  result:           "win" | "lose";
+  answer:           { killerId: KillerId; motiveDirection: MotiveDirection; subMotiveId: SubMotiveId | null };
 }
 
 function pickText(arr: readonly string[], seed: number): string {
@@ -90,7 +91,7 @@ export default function ResultPage() {
     );
   }
 
-  const { correct, killerCorrect, motiveCorrect, score, answer } = result;
+  const { correct, killerCorrect, motiveCorrect, subMotiveCorrect, score, answer } = result;
   const correctKiller = SUSPECTS[answer.killerId];
   const correctMotive = MOTIVES[answer.motiveDirection];
   const flavorSeed    = answer.killerId.charCodeAt(0);
@@ -220,9 +221,9 @@ export default function ResultPage() {
                   <p className="font-mono-sys text-[9px] text-[#e2c9a0]/28 mt-0.5">{correctKiller.role}</p>
                 </div>
 
-                {/* 動機 */}
+                {/* 動機方向 */}
                 <div className="flex-1">
-                  <p className="font-mono-sys text-[9px] text-[#e2c9a0]/25 mb-1 tracking-widest">動機</p>
+                  <p className="font-mono-sys text-[9px] text-[#e2c9a0]/25 mb-1 tracking-widest">動機方向</p>
                   <div className="flex items-center gap-1.5">
                     <span
                       className="font-mono-sys text-[9px] w-5 h-5 flex items-center justify-center rounded border"
@@ -247,6 +248,40 @@ export default function ResultPage() {
                 </div>
               </div>
 
+              {/* 子動機 */}
+              {answer.subMotiveId && (
+                <div className="border-t border-[#e2c9a0]/6 pt-3">
+                  <p className="font-mono-sys text-[9px] text-[#e2c9a0]/25 mb-1.5 tracking-widest">具體動機</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="font-mono-sys text-[9px] px-1.5 py-0.5 rounded border"
+                      style={{
+                        color:       "#ff3864",
+                        borderColor: "rgba(255,56,100,0.3)",
+                        background:  "rgba(255,56,100,0.08)",
+                      }}
+                    >
+                      {answer.subMotiveId}
+                    </span>
+                    <p
+                      className="text-sm text-[#e2c9a0]"
+                      style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                    >
+                      {SUB_MOTIVES[answer.subMotiveId].name}
+                    </p>
+                    {subMotiveCorrect && (
+                      <span className="font-mono-sys text-[9px] text-[#ff3864] border border-[#ff3864]/30 px-1.5 rounded">✓</span>
+                    )}
+                  </div>
+                  <p
+                    className="text-[11px] text-[#e2c9a0]/28 leading-relaxed mt-1"
+                    style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  >
+                    {SUB_MOTIVES[answer.subMotiveId].description}
+                  </p>
+                </div>
+              )}
+
               {/* 角色描述 */}
               <p
                 className="text-[11px] text-[#e2c9a0]/30 leading-relaxed border-t border-[#e2c9a0]/6 pt-3"
@@ -257,17 +292,23 @@ export default function ResultPage() {
             </div>
 
             {/* 分數明細 */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "兇手", pts: killerCorrect ? 60 : 0, total: 60 },
-                { label: "動機", pts: motiveCorrect ? 40 : 0, total: 40 },
+                { label: "兇手",   pts: killerCorrect    ? 50 : 0, total: 50 },
+                { label: "動機",   pts: motiveCorrect    ? 20 : 0, total: 20 },
+                { label: "子動機", pts: subMotiveCorrect ? 30 : 0, total: 30 },
               ].map((item) => (
                 <div
                   key={item.label}
                   className="border border-[#e2c9a0]/6 rounded p-3 text-center"
                   style={{ background: "rgba(17,24,32,0.7)" }}
                 >
-                  <p className="font-mono-sys text-base text-[#e2c9a0]">{item.pts}</p>
+                  <p
+                    className="font-mono-sys text-base"
+                    style={{ color: item.pts > 0 ? "#ff3864" : "rgba(226,201,160,0.4)" }}
+                  >
+                    {item.pts}
+                  </p>
                   <p className="font-mono-sys text-[9px] text-[#e2c9a0]/22 tracking-widest mt-0.5">
                     {item.label} / {item.total}
                   </p>

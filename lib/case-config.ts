@@ -35,6 +35,76 @@ export const MOTIVES: Record<MotiveDirection, MotiveDefinition> = {
   },
 };
 
+// ── 子動機（Sub-motive）──────────────────────────────────────
+// 每個動機方向下有 2 個子動機，玩家必須正確指出才能拿到滿分。
+// 隨機引擎從 2 個中選 1 個存入 CaseConfig 和 truth_string。
+// 機率：1/8 嫌疑人 × 1/4 方向 × 1/2 子動機 ≈ 1/64 純猜命中。
+
+export type SubMotiveId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "D1" | "D2";
+
+export interface SubMotiveDefinition {
+  id:              SubMotiveId;
+  parentDirection: MotiveDirection;
+  name:            string;
+  description:     string;
+}
+
+export const SUB_MOTIVES: Record<SubMotiveId, SubMotiveDefinition> = {
+  A1: {
+    id:              "A1",
+    parentDirection: "A",
+    name:            "喪親之仇",
+    description:     "失蹤者直接或間接造成了兇手至親的死亡或消失。這是最私人、也最不可撤回的動機。",
+  },
+  A2: {
+    id:              "A2",
+    parentDirection: "A",
+    name:            "集體清算",
+    description:     "那年所有參與事件的人都要付出代價。兇手不針對任何一個——他們針對全部。",
+  },
+  B1: {
+    id:              "B1",
+    parentDirection: "B",
+    name:            "奉命滅口",
+    description:     "有人要這些知情者消失。兇手只是執行者，他甚至不確定自己為什麼被選上。",
+  },
+  B2: {
+    id:              "B2",
+    parentDirection: "B",
+    name:            "主動噤聲",
+    description:     "兇手沒有等任何命令。他自己判斷這些人必須沉默，他相信這是在保護某樣更重要的東西。",
+  },
+  C1: {
+    id:              "C1",
+    parentDirection: "C",
+    name:            "協議處置",
+    description:     "這些失蹤者是實驗的殘留變數。按照某份從未公開的協議，不穩定的覺醒殘留必須被清除。",
+  },
+  C2: {
+    id:              "C2",
+    parentDirection: "C",
+    name:            "本能驅逐",
+    description:     "沒有計畫，沒有指令。覺醒者的身體感知到了某種威脅，然後它自己做了決定。",
+  },
+  D1: {
+    id:              "D1",
+    parentDirection: "D",
+    name:            "獻祭邏輯",
+    description:     "犧牲這些人，是為了讓覺醒更完整。兇手相信這是必要的儀式，不是殺戮。",
+  },
+  D2: {
+    id:              "D2",
+    parentDirection: "D",
+    name:            "淨化思維",
+    description:     "這些失蹤者「不配」見證。兇手認為自己在做篩選，讓世界留下值得留下的人。",
+  },
+};
+
+/** 取得某動機方向的所有子動機 */
+export function getSubMotivesForDirection(dir: MotiveDirection): SubMotiveDefinition[] {
+  return Object.values(SUB_MOTIVES).filter((s) => s.parentDirection === dir);
+}
+
 // ── 嫌疑人 ────────────────────────────────────────────────────
 export type KillerId =
   | "hanzhuo"
@@ -151,13 +221,14 @@ export const TRUTH_ELEMENTS: TruthElementCode[] = [
 
 // ── 案件配置（隨機引擎的輸出）────────────────────────────────
 export interface CaseConfig {
-  killerId: KillerId;
+  killerId:        KillerId;
   motiveDirection: MotiveDirection;
-  relationship: RelationshipCode;
-  elements: [TruthElementCode] | [TruthElementCode, TruthElementCode];
-  truthString: string;         // 例：P3A1B2-7788-3-R7-D2-M1E3
-  seed: number;
-  generatedAt: string;         // ISO timestamp
+  subMotiveId:     SubMotiveId;
+  relationship:    RelationshipCode;
+  elements:        [TruthElementCode] | [TruthElementCode, TruthElementCode];
+  truthString:     string;        // 例：PA3-A1-0411-5678-R7-D2
+  seed:            number;
+  generatedAt:     string;        // ISO timestamp
 }
 
 // ── 輔助：所有合法的 killer+motive 對 ────────────────────────

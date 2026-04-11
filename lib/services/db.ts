@@ -72,6 +72,7 @@ export async function createGameSession(params: {
   guestId:          string;
   killerId:         KillerId;
   motiveDirection:  MotiveDirection;
+  truthString?:     string;
 }): Promise<string | null> {
   if (!isSupabaseConfigured()) return null;
   try {
@@ -82,6 +83,7 @@ export async function createGameSession(params: {
         player_name:      params.guestId,
         killer_id:        params.killerId,
         motive_direction: params.motiveDirection,
+        truth_string:     params.truthString ?? null,
         status:           "active",
       })
       .select("id")
@@ -107,13 +109,14 @@ export async function getGameSession(sessionId: string): Promise<{
   motive_direction: string;
   player_name:      string;
   status:           string;
+  truth_string?:    string;
 } | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const db = createServerSupabase();
     const { data, error } = await db
       .from("game_sessions")
-      .select("id, killer_id, motive_direction, player_name, status")
+      .select("id, killer_id, motive_direction, player_name, status, truth_string")
       .eq("id", sessionId)
       .single();
     if (error) return null;
@@ -225,6 +228,7 @@ export async function getCaseConfig(sessionId: string): Promise<CaseConfig | nul
     return {
       killerId:        data.killer_id as KillerId,
       motiveDirection: data.motive_direction as MotiveDirection,
+      subMotiveId:     "A1",
       relationship:    "R1",
       elements:        ["D1"],
       truthString:     "",
@@ -417,5 +421,205 @@ export async function getChatHistory(
   } catch (e) {
     console.error("[db] getChatHistory:", e);
     return { messages: [], npcState: null };
+  }
+}
+
+// ── 道具欄 ────────────────────────────────────────────────────
+
+export interface InventoryItem {
+  id:           string;
+  session_id:   string;
+  item_id:      string;
+  item_name:    string;
+  description:  string;
+  source_npc?:  string | null;
+  source_scene?: string | null;
+  icon?:        string | null;
+  obtained_at:  string;
+}
+
+/**
+ * 取得玩家道具欄。
+ */
+export async function getPlayerInventory(sessionId: string): Promise<InventoryItem[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data, error } = await db
+      .from("player_inventory")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("obtained_at", { ascending: true });
+    if (error) {
+      console.warn("[db] getPlayerInventory:", error.message);
+      return [];
+    }
+    return (data ?? []) as InventoryItem[];
+  } catch (e) {
+    console.warn("[db] getPlayerInventory:", e);
+    return [];
+  }
+}
+
+/**
+ * 新增道具到玩家道具欄。
+ */
+export async function addInventoryItem(
+  sessionId: string,
+  item: {
+    item_name:    string;
+    description:  string;
+    source_npc?:  string;
+    source_scene?: string;
+    icon?:        string;
+  },
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    const item_id = `item_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    await db.from("player_inventory").insert({
+      session_id:   sessionId,
+      item_id,
+      item_name:    item.item_name,
+      description:  item.description,
+      source_npc:   item.source_npc  ?? null,
+      source_scene: item.source_scene ?? null,
+      icon:         item.icon         ?? null,
+    });
+  } catch (e) {
+    console.warn("[db] addInventoryItem:", e);
+  }
+}
+
+// ── 線索欄 ────────────────────────────────────────────────────
+
+export interface PlayerClue {
+  id:            string;
+  session_id:    string;
+  clue_id:       string;
+  clue_text:     string;
+  clue_type:     "npc" | "scene" | "deduced";
+  source_npc?:   string | null;
+  source_scene?: string | null;
+  category:      "relationship" | "motive" | "method" | "alibi" | "general";
+  discovered_at: string;
+}
+
+/**
+ * 取得玩家已收集的線索。
+ */
+export async function getPlayerClues(sessionId: string): Promise<PlayerClue[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data, error } = await db
+      .from("player_clues")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("discovered_at", { ascending: true });
+    if (error) {
+      console.warn("[db] getPlayerClues:", error.message);
+      return [];
+    }
+    return (data ?? []) as PlayerClue[];
+  } catch (e) {
+    console.warn("[db] getPlayerClues:", e);
+    return [];
+  }
+}
+
+/**
+ * 新增一條線索到玩家線索欄。
+ */
+export async function addPlayerClue(
+  sessionId: string,
+  clue: {
+    clue_text:     string;
+    clue_type:     "npc" | "scene" | "deduced";
+    source_npc?:   string;
+    source_scene?: string;
+    category?:     "relationship" | "motive" | "method" | "alibi" | "general";
+  },
+): Promise<PlayerClue | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const db = createServerSupabase();
+    const clue_id = `clue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    const { data, error } = await db
+      .from("player_clues")
+      .insert({
+        session_id:   sessionId,
+        clue_id,
+        clue_text:    clue.clue_text,
+        clue_type:    clue.clue_type,
+        source_npc:   clue.source_npc   ?? null,
+        source_scene: clue.source_scene ?? null,
+        category:     clue.category     ?? "general",
+      })
+      .select("*")
+      .single();
+    if (error) {
+      console.warn("[db] addPlayerClue:", error.message);
+      return null;
+    }
+    return data as PlayerClue;
+  } catch (e) {
+    console.warn("[db] addPlayerClue:", e);
+    return null;
+  }
+}
+
+// ── 線索合併 ──────────────────────────────────────────────────
+
+export interface ClueCombination {
+  id:              string;
+  session_id:      string;
+  input_clue_ids:  string[];
+  result_clue_id:  string;
+  deduced_at:      string;
+}
+
+/**
+ * 儲存線索合併記錄。
+ */
+export async function saveClueCombination(
+  sessionId:    string,
+  inputClueIds: string[],
+  resultClueId: string,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db.from("clue_combinations").insert({
+      session_id:     sessionId,
+      input_clue_ids: inputClueIds,
+      result_clue_id: resultClueId,
+    });
+  } catch (e) {
+    console.warn("[db] saveClueCombination:", e);
+  }
+}
+
+/**
+ * 取得本局所有線索合併記錄。
+ */
+export async function getClueCombinations(sessionId: string): Promise<ClueCombination[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data, error } = await db
+      .from("clue_combinations")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("deduced_at", { ascending: true });
+    if (error) {
+      console.warn("[db] getClueCombinations:", error.message);
+      return [];
+    }
+    return (data ?? []) as ClueCombination[];
+  } catch (e) {
+    console.warn("[db] getClueCombinations:", e);
+    return [];
   }
 }

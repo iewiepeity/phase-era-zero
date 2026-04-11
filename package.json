@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:npc": "tsx scripts/test-npc.ts"
+    "test:npc": "tsx scripts/test-npc.ts",
+    "test:accuse": "tsx scripts/test-accuse-consistency.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -3,12 +3,17 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { SUSPECTS, MOTIVES } from "@/lib/case-config";
+import {
+  SUSPECTS,
+  MOTIVES,
+  SUB_MOTIVES,
+  getSubMotivesForDirection,
+} from "@/lib/case-config";
 import { MOTIVE_COLORS, STORAGE_KEYS } from "@/lib/constants";
 import { SuspectCard } from "@/components/game/SuspectCard";
-import type { KillerId, MotiveDirection } from "@/lib/case-config";
+import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const SUSPECT_KEYS = Object.keys(SUSPECTS) as KillerId[];
 
@@ -17,24 +22,31 @@ export default function AccusePage() {
   const sessionId = params.sessionId as string;
   const router    = useRouter();
 
-  const [step,         setStep]         = useState<Step>(1);
-  const [chosenKiller, setChosenKiller] = useState<KillerId | null>(null);
-  const [chosenMotive, setChosenMotive] = useState<MotiveDirection | null>(null);
-  const [submitting,   setSubmitting]   = useState(false);
-  const [submitError,  setSubmitError]  = useState("");
+  const [step,            setStep]            = useState<Step>(1);
+  const [chosenKiller,    setChosenKiller]    = useState<KillerId | null>(null);
+  const [chosenMotive,    setChosenMotive]    = useState<MotiveDirection | null>(null);
+  const [chosenSubMotive, setChosenSubMotive] = useState<SubMotiveId | null>(null);
+  const [submitting,      setSubmitting]      = useState(false);
+  const [submitError,     setSubmitError]     = useState("");
 
-  const suspectList = Object.values(SUSPECTS);
-  const motiveList  = Object.values(MOTIVES);
+  const suspectList  = Object.values(SUSPECTS);
+  const motiveList   = Object.values(MOTIVES);
+  const subMotives   = chosenMotive ? getSubMotivesForDirection(chosenMotive) : [];
 
   async function handleSubmit() {
-    if (!chosenKiller || !chosenMotive || submitting) return;
+    if (!chosenKiller || !chosenMotive || !chosenSubMotive || submitting) return;
     setSubmitting(true);
     setSubmitError("");
     try {
       const res = await fetch("/api/game/accuse", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ sessionId, accusedKillerId: chosenKiller, accusedMotive: chosenMotive }),
+        body:    JSON.stringify({
+          sessionId,
+          accusedKillerId:  chosenKiller,
+          accusedMotive:    chosenMotive,
+          accusedSubMotive: chosenSubMotive,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setSubmitError(data.message ?? "提交失敗，請稍後再試。"); return; }
@@ -66,7 +78,7 @@ export default function AccusePage() {
             提出指控
           </p>
           <p className="font-mono-sys text-[9px] text-[#5bb8ff]/30 tracking-widest mt-0.5">
-            STEP {step} / 3
+            STEP {step} / 4
           </p>
         </div>
         <div className="w-16" />
@@ -74,7 +86,7 @@ export default function AccusePage() {
 
       {/* ── 步驟進度條 ──────────────────────────────────── */}
       <div className="flex gap-1.5 px-4 pt-3 pb-1">
-        {([1, 2, 3] as Step[]).map((s) => (
+        {([1, 2, 3, 4] as Step[]).map((s) => (
           <div
             key={s}
             className="flex-1 h-[2px] rounded-full transition-all duration-500"
@@ -105,7 +117,12 @@ export default function AccusePage() {
                 number={SUSPECT_KEYS.indexOf(s.id) + 1}
                 selected={chosenKiller === s.id}
                 animIndex={idx}
-                onClick={(id) => { setChosenKiller(id); setChosenMotive(null); setStep(2); }}
+                onClick={(id) => {
+                  setChosenKiller(id);
+                  setChosenMotive(null);
+                  setChosenSubMotive(null);
+                  setStep(2);
+                }}
               />
             ))}
           </div>
@@ -139,7 +156,7 @@ export default function AccusePage() {
               className="text-[10px] text-[#e2c9a0]/25 tracking-wide"
               style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
             >
-              的行兇動機是？
+              的行兇動機方向是？
             </span>
           </div>
 
@@ -149,7 +166,11 @@ export default function AccusePage() {
               return (
                 <button
                   key={m.id}
-                  onClick={() => { setChosenMotive(m.id); setStep(3); }}
+                  onClick={() => {
+                    setChosenMotive(m.id);
+                    setChosenSubMotive(null);
+                    setStep(3);
+                  }}
                   className="w-full text-left p-4 rounded border-l-[3px] border-t border-r border-b transition-all duration-200 card-lift animate-fade-in-up opacity-0"
                   style={{
                     animationDelay:    `${idx * 60}ms`,
@@ -187,14 +208,102 @@ export default function AccusePage() {
         </div>
       )}
 
-      {/* ══ 步驟 3：確認指控 ══════════════════════════ */}
+      {/* ══ 步驟 3：選擇子動機 ══════════════════════════ */}
       {step === 3 && chosenKiller && chosenMotive && (
-        <div className="flex-1 flex flex-col px-4 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4">
           <button
             onClick={() => setStep(2)}
+            className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 tracking-widest transition-colors mb-4"
+          >
+            ← 重新選擇動機方向
+          </button>
+
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="text-[10px] text-[#e2c9a0]/30 tracking-wide"
+              style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+            >
+              動機方向：
+            </span>
+            <span
+              className="font-mono-sys text-[11px] w-5 h-5 flex items-center justify-center rounded-sm border font-bold"
+              style={{
+                color:       MOTIVE_COLORS[chosenMotive].text,
+                borderColor: MOTIVE_COLORS[chosenMotive].badge,
+                background:  MOTIVE_COLORS[chosenMotive].badge,
+              }}
+            >
+              {chosenMotive}
+            </span>
+            <span
+              className="text-sm text-[#e2c9a0]/70 tracking-wide"
+              style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+            >
+              {MOTIVES[chosenMotive].name}
+            </span>
+          </div>
+
+          <p
+            className="text-xs text-[#e2c9a0]/35 mb-5"
+            style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+          >
+            具體動機是哪一種？
+          </p>
+
+          <div className="space-y-3">
+            {subMotives.map((sub, idx) => (
+              <button
+                key={sub.id}
+                onClick={() => { setChosenSubMotive(sub.id); setStep(4); }}
+                className="w-full text-left p-4 rounded border border-[#e2c9a0]/8 transition-all duration-200 card-lift animate-fade-in-up opacity-0"
+                style={{
+                  animationDelay: `${idx * 80}ms`,
+                  background: chosenSubMotive === sub.id
+                    ? MOTIVE_COLORS[chosenMotive].bg
+                    : "rgba(17,24,32,0.7)",
+                  borderColor: chosenSubMotive === sub.id
+                    ? MOTIVE_COLORS[chosenMotive].border
+                    : "rgba(226,201,160,0.08)",
+                }}
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <span
+                    className="font-mono-sys text-[10px] px-1.5 py-0.5 rounded border"
+                    style={{
+                      color:       MOTIVE_COLORS[chosenMotive].text,
+                      borderColor: MOTIVE_COLORS[chosenMotive].badge,
+                      background:  "rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {sub.id}
+                  </span>
+                  <p
+                    className="text-sm tracking-wide text-[#e2c9a0]"
+                    style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  >
+                    {sub.name}
+                  </p>
+                </div>
+                <p
+                  className="text-xs text-[#e2c9a0]/38 leading-relaxed pl-8"
+                  style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                >
+                  {sub.description}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ══ 步驟 4：確認指控 ══════════════════════════ */}
+      {step === 4 && chosenKiller && chosenMotive && chosenSubMotive && (
+        <div className="flex-1 flex flex-col px-4 py-4">
+          <button
+            onClick={() => setStep(3)}
             className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 tracking-widest transition-colors mb-6 self-start"
           >
-            ← 修改動機
+            ← 修改子動機
           </button>
 
           <div className="flex-1 flex flex-col items-center justify-center gap-6">
@@ -223,7 +332,7 @@ export default function AccusePage() {
 
               <div className="h-px bg-gradient-to-r from-transparent via-[#e2c9a0]/10 to-transparent" />
 
-              {/* 動機 */}
+              {/* 動機方向 */}
               <div className="text-center">
                 <p className="font-mono-sys text-[10px] text-[#e2c9a0]/25 mb-2 tracking-widest">動機方向</p>
                 <div className="flex items-center justify-center gap-2">
@@ -244,6 +353,37 @@ export default function AccusePage() {
                     {MOTIVES[chosenMotive].name}
                   </p>
                 </div>
+              </div>
+
+              <div className="h-px bg-gradient-to-r from-transparent via-[#e2c9a0]/10 to-transparent" />
+
+              {/* 子動機 */}
+              <div className="text-center">
+                <p className="font-mono-sys text-[10px] text-[#e2c9a0]/25 mb-2 tracking-widest">具體動機</p>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <span
+                    className="font-mono-sys text-[10px] px-1.5 py-0.5 rounded border"
+                    style={{
+                      color:       MOTIVE_COLORS[chosenMotive].text,
+                      borderColor: MOTIVE_COLORS[chosenMotive].badge,
+                      background:  "rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {chosenSubMotive}
+                  </span>
+                  <p
+                    className="text-sm text-[#e2c9a0]"
+                    style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  >
+                    {SUB_MOTIVES[chosenSubMotive].name}
+                  </p>
+                </div>
+                <p
+                  className="text-[11px] text-[#e2c9a0]/30 leading-relaxed"
+                  style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                >
+                  {SUB_MOTIVES[chosenSubMotive].description}
+                </p>
               </div>
             </div>
 
