@@ -142,7 +142,7 @@ export default function MapPage() {
                 </div>
 
                 {/* 場景卡片 2 欄 */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {scenes.map((scene) => {
                     const visited = visitedIds.has(scene.id);
                     const palette = SCENE_PALETTE[scene.id] ?? DEFAULT_SCENE_PALETTE;

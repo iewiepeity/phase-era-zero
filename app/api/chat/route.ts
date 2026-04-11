@@ -6,10 +6,14 @@ import {
   saveChatMessages,
   getCaseConfig,
   getChatHistory,
+  getTalkedNpcs,
+  getCollectedClueIds,
+  getInventoryItemIds,
 } from "@/lib/services/db";
 import { callGeminiChat, isRateLimitError } from "@/lib/services/gemini";
 import {
   buildNpcPrompt,
+  buildConversationMemory,
   detectMessageIntent,
   calcTrustIncrement,
   detectRevealedClue,
@@ -18,7 +22,9 @@ import {
 } from "@/lib/npc-engine";
 import { getNpc } from "@/lib/npc-registry";
 import { buildNpcClues } from "@/lib/random-engine";
+import { getScene } from "@/lib/scene-config";
 import type { ChatMessage } from "@/lib/types";
+import type { PlayerContext } from "@/lib/content/dialogue-triggers";
 
 // ── GET /api/chat — 載入對話歷史 ──────────────────────────────
 export async function GET(req: NextRequest) {
@@ -41,16 +47,20 @@ export async function POST(req: NextRequest) {
       messages,
       sessionId,
       guestId,
-      npcId = "chen_jie",
+      npcId        = "chen_jie",
       currentAct   = 1,
       playerRoute  = "A",
+      currentSceneId,
+      visitedScenes  = [],
     } = (await req.json()) as {
-      messages:     ChatMessage[];
-      sessionId?:   string;
-      guestId?:     string;
-      npcId?:       string;
-      currentAct?:  number;
-      playerRoute?: "A" | "B";
+      messages:       ChatMessage[];
+      sessionId?:     string;
+      guestId?:       string;
+      npcId?:         string;
+      currentAct?:    number;
+      playerRoute?:   "A" | "B";
+      currentSceneId?: string;
+      visitedScenes?: string[];
     };
 
     // 1. 確保有 session
@@ -63,36 +73,64 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown NPC: ${npcId}` }, { status: 400 });
     }
 
-    // 3. 取 NPC 狀態
-    const npcState = resolvedSessionId
-      ? await getNpcStateFromDb(resolvedSessionId, npcId)
-      : { selfAffinity: 0, sharedClues: [], isExposed: false, lastSeenAct: 0 };
+    // 3. 並行載入 NPC 狀態 + 對話歷史 + 玩家進度（用於觸發判斷）
+    const [npcState, historyData, talkedNpcs, clueIds, itemIds] = await Promise.all([
+      resolvedSessionId
+        ? getNpcStateFromDb(resolvedSessionId, npcId)
+        : Promise.resolve({ selfAffinity: 0, sharedClues: [], isExposed: false, lastSeenAct: 0 }),
+      resolvedSessionId
+        ? getChatHistory(resolvedSessionId, npcId)
+        : Promise.resolve({ messages: [], npcState: null }),
+      resolvedSessionId ? getTalkedNpcs(resolvedSessionId)       : Promise.resolve([]),
+      resolvedSessionId ? getCollectedClueIds(resolvedSessionId) : Promise.resolve([]),
+      resolvedSessionId ? getInventoryItemIds(resolvedSessionId) : Promise.resolve([]),
+    ]);
 
-    // 4. 組裝 System Prompt（含動態線索）
-    const caseConfig    = resolvedSessionId ? await getCaseConfig(resolvedSessionId) : null;
-    const dynamicClues  = caseConfig ? buildNpcClues(npcId, caseConfig) : undefined;
+    // 4. 取得所有 NPC 信任度（用於 trustLevel 觸發）
+    const npcTrustLevels: Record<string, number> = { [npcId]: npcState.selfAffinity };
+
+    // 5. 組建 PlayerContext（觸發條件判斷）
+    const playerContext: PlayerContext = {
+      talkedToNpcs:    talkedNpcs,
+      visitedScenes:   visitedScenes,
+      collectedItems:  itemIds,
+      collectedClues:  clueIds,
+      npcTrustLevels,
+    };
+
+    // 6. 建立對話記憶（前 N 輪對話）
+    const historyMessages = historyData.messages as Array<{ role: string; content: string }>;
+    const sceneName       = currentSceneId ? (getScene(currentSceneId)?.name ?? undefined) : undefined;
+    const conversationMemory = buildConversationMemory(historyMessages, sceneName);
+
+    // 7. 組裝 System Prompt
+    const caseConfig   = resolvedSessionId ? await getCaseConfig(resolvedSessionId) : null;
+    const dynamicClues = caseConfig ? buildNpcClues(npcId, caseConfig) : undefined;
 
     const systemPrompt = buildNpcPrompt({
       npcId,
       currentAct,
       playerRoute,
-      playerStats:    DEFAULT_PLAYER_STATS,
+      playerStats:         DEFAULT_PLAYER_STATS,
       npcState,
-      availableClues: dynamicClues,
+      availableClues:      dynamicClues,
+      currentSceneId,
+      conversationMemory,
+      playerContext,
     });
 
-    // 5. 呼叫 Gemini
+    // 8. 呼叫 Gemini
     const history     = messages.slice(0, -1);
     const lastMessage = messages[messages.length - 1];
     const reply       = await callGeminiChat(systemPrompt, history, lastMessage.content);
 
-    // 6. 計算信任增量 + 偵測揭露線索
+    // 9. 計算信任增量 + 偵測揭露線索
     const intent         = detectMessageIntent(lastMessage.content);
     const trustDelta     = calcTrustIncrement(npc, intent);
     const available      = filterAvailableClues(npc.clues, npcState, DEFAULT_PLAYER_STATS, currentAct);
     const revealedClueId = detectRevealedClue(reply, available);
 
-    // 7. 非同步寫入 DB（不阻塞回應）
+    // 10. 非同步寫入 DB（不阻塞回應）
     if (resolvedSessionId) {
       saveChatMessages(resolvedSessionId, npcId, lastMessage.content, reply);
       updateNpcState(resolvedSessionId, npcId, trustDelta, revealedClueId);

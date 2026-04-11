@@ -773,3 +773,60 @@ export async function recordSceneVisit(
     console.warn("[db] recordSceneVisit:", e);
   }
 }
+
+// ── 玩家進度聚合查詢 ───────────────────────────────────────────
+
+/**
+ * 取得玩家已對話過的所有 NPC ID（conversation_count > 0）。
+ */
+export async function getTalkedNpcs(sessionId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data } = await db
+      .from("npc_states")
+      .select("npc_id")
+      .eq("session_id", sessionId)
+      .gt("conversation_count", 0);
+    return (data ?? []).map((r: { npc_id: string }) => r.npc_id);
+  } catch (e) {
+    console.warn("[db] getTalkedNpcs:", e);
+    return [];
+  }
+}
+
+/**
+ * 取得玩家所有已收集的線索 ID。
+ */
+export async function getCollectedClueIds(sessionId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data } = await db
+      .from("player_clues")
+      .select("clue_id")
+      .eq("session_id", sessionId);
+    return (data ?? []).map((r: { clue_id: string }) => r.clue_id);
+  } catch (e) {
+    console.warn("[db] getCollectedClueIds:", e);
+    return [];
+  }
+}
+
+/**
+ * 取得玩家所有已持有的道具 ID。
+ */
+export async function getInventoryItemIds(sessionId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const db = createServerSupabase();
+    const { data } = await db
+      .from("player_inventory")
+      .select("item_id")
+      .eq("session_id", sessionId);
+    return (data ?? []).map((r: { item_id: string }) => r.item_id);
+  } catch (e) {
+    console.warn("[db] getInventoryItemIds:", e);
+    return [];
+  }
+}

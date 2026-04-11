@@ -13,8 +13,9 @@ function genId(): string {
 }
 
 interface UseChatOptions {
-  sessionId: string;
-  npcId:     string;
+  sessionId:      string;
+  npcId:          string;
+  currentSceneId?: string;
 }
 
 interface UseChatReturn {
@@ -38,7 +39,7 @@ interface UseChatReturn {
  *
  * 負責：歷史載入、打字機動畫、送出訊息、信任度更新、錯誤處理、自動捲底。
  */
-export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
+export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): UseChatReturn {
   const npc = getNpc(npcId);
 
   const [messages,  setMessages]  = useState<UiMessage[]>([]);
@@ -166,11 +167,25 @@ export function useChat({ sessionId, npcId }: UseChatOptions): UseChatReturn {
 
     const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 
+    // 從 localStorage 讀取已訪問場景
+    const visitedScenes = (() => {
+      try {
+        const raw = localStorage.getItem(`pez_visited_${sessionId}`) ?? "";
+        return raw.split(",").filter(Boolean);
+      } catch { return []; }
+    })();
+
     try {
       const res  = await fetch("/api/chat", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ messages: allMessages, sessionId, npcId }),
+        body:    JSON.stringify({
+          messages:       allMessages,
+          sessionId,
+          npcId,
+          currentSceneId,
+          visitedScenes,
+        }),
       });
       const data = await res.json();
 

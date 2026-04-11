@@ -8,6 +8,7 @@ import { SceneCard } from "@/components/game/SceneCard";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { getDifficulty, type DifficultyId } from "@/lib/content/difficulty";
 import type { Scene } from "@/lib/scene-config";
+import { FontSizeControl } from "@/components/ui/FontSizeControl";
 
 export default function GameHubPage() {
   const params    = useParams();
@@ -133,6 +134,9 @@ export default function GameHubPage() {
         )}
 
         <span className="flex-1" />
+
+        {/* 字體調整 */}
+        <FontSizeControl />
 
         {/* 成就連結 */}
         <Link

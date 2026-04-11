@@ -9,6 +9,7 @@ import { ChatBubble } from "@/components/game/ChatBubble";
 import { TrustBar } from "@/components/ui/TrustBar";
 import { NPC_CHAT_OPTIONS } from "@/lib/content/action-options";
 import { ActionPanel } from "@/components/game/ActionPanel";
+import { FontSizeControl } from "@/components/ui/FontSizeControl";
 
 export default function GameChatPage() {
   const params    = useParams();
@@ -47,7 +48,7 @@ export default function GameChatPage() {
     : [];
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto bg-[#0d1117]">
+    <div className="flex flex-col h-dvh max-w-2xl mx-auto bg-[#0d1117]">
 
       {/* ── 標題列 ───────────────────────────────────────── */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-[#e2c9a0]/6 shrink-0">
@@ -77,8 +78,11 @@ export default function GameChatPage() {
           </p>
         </div>
 
-        {/* 信任度 */}
-        <TrustBar level={npcState.trustLevel} dotColor={npcColor.dot} />
+        {/* 右側：信任度 + 字體調整 */}
+        <div className="flex flex-col items-end gap-1">
+          <TrustBar level={npcState.trustLevel} dotColor={npcColor.dot} />
+          <FontSizeControl />
+        </div>
       </header>
 
       {/* ── 對話區 ──────────────────────────────────────── */}

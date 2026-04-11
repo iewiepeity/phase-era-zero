@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif_TC, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { FontSizeInitializer } from "@/components/ui/FontSizeInitializer";
 
 const notoSerifTC = Noto_Serif_TC({
   variable: "--font-noto-serif-tc",
@@ -38,7 +39,10 @@ export default function RootLayout({
       lang="zh-TW"
       className={`${notoSerifTC.variable} ${inter.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased">
+        <FontSizeInitializer />
+        {children}
+      </body>
     </html>
   );
 }

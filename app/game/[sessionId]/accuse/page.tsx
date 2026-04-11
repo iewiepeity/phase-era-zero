@@ -109,7 +109,7 @@ export default function AccusePage() {
             你認為誰是這起失蹤案的幕後黑手？
           </p>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {suspectList.map((s, idx) => (
               <SuspectCard
                 key={s.id}

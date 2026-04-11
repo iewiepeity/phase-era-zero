@@ -5,6 +5,9 @@
  */
 
 import { getNpc, type Clue, type NpcDefinition } from "./npc-registry";
+import { getNpcRelationships }                   from "./content/npc-relationships";
+import { getTriggeredPrompts, type PlayerContext } from "./content/dialogue-triggers";
+import { getScene }                               from "./scene-config";
 
 // ── 輸入型別（依照 game-engine-spec.md）────────────────────────
 export interface PlayerStats {
@@ -31,6 +34,12 @@ export interface BuildNpcPromptParams {
   availableClues?: Clue[];                    // 若不傳，使用 registry 的預設線索
   truthString?: string;                       // 後端用，不送前端
   playerIdentity?: "normal" | "phase2";       // 一般人 or 第二相體
+  /** 當前場景 ID（讓 NPC 知道自己在哪裡）*/
+  currentSceneId?: string;
+  /** 過去對話的簡要記憶（供 System Prompt 注入）*/
+  conversationMemory?: string;
+  /** 玩家遊戲狀態（用於觸發條件判斷）*/
+  playerContext?: PlayerContext;
 }
 
 // ── 預設 PlayerStats（訪客/Phase 2 暫用）──────────────────────
@@ -127,6 +136,108 @@ function buildRouteBConstraint(playerStats: PlayerStats): string {
   return "";
 }
 
+// ── 場景情境區塊 ──────────────────────────────────────────────
+
+function buildSceneContext(npcId: string, sceneId: string): string {
+  const scene = getScene(sceneId);
+  const npc   = getNpc(npcId);
+  if (!scene) return "";
+
+  // 如果這個 NPC 的 primary scene 就是當前場景，不需要特別說明
+  const isHomeScene = npc?.sceneId === sceneId;
+  if (isHomeScene) return "";
+
+  return `\n【當前位置】\n你現在在「${scene.name}」（${scene.district}）。這不是你平常待的地方，但你現在在這裡。你可以根據這個地點的性質來調整你說話的方式和你願意說的事。`;
+}
+
+// ── NPC 關係知識注入 ──────────────────────────────────────────
+
+function buildRelationshipContext(npcId: string): string {
+  const relationships = getNpcRelationships(npcId);
+  if (relationships.length === 0) return "";
+
+  const lines = relationships
+    .map((r) => r.description)
+    .join("\n\n");
+
+  return `\n【你認識的人】\n以下是你對這個城市裡一些人的了解。當對方問起這些人時，用這個作為基礎，但說得自然，不要像在背稿：\n\n${lines}`;
+}
+
+// ── 對話記憶注入 ──────────────────────────────────────────────
+
+/**
+ * 從 DB 載入的對話記錄建立記憶摘要，注入 System Prompt。
+ * 讓 NPC 記得之前說過的話，避免前後矛盾。
+ */
+export function buildConversationMemory(
+  historyMessages: Array<{ role: string; content: string }>,
+  sceneName?: string,
+): string {
+  if (!historyMessages.length) return "";
+
+  const filtered = historyMessages.filter(
+    (m) => m.role === "user" || m.role === "assistant"
+  );
+  if (!filtered.length) return "";
+
+  const FULL_KEEP = 8;    // 保留最近 N 輪完整（一輪 = user + assistant）
+  const fullPairs: string[] = [];
+  const summaryLines: string[] = [];
+
+  // 從最新往舊整理輪次
+  const pairs: Array<{ user: string; assistant: string }> = [];
+  for (let i = 0; i < filtered.length - 1; i++) {
+    if (filtered[i].role === "user" && filtered[i + 1].role === "assistant") {
+      pairs.push({ user: filtered[i].content, assistant: filtered[i + 1].content });
+      i++;
+    }
+  }
+
+  const recentPairs = pairs.slice(-FULL_KEEP);
+  const olderPairs  = pairs.slice(0, Math.max(0, pairs.length - FULL_KEEP));
+
+  // 舊的對話做成摘要（只取關鍵內容）
+  if (olderPairs.length > 0) {
+    summaryLines.push(`（之前共有 ${olderPairs.length} 輪對話，你說過的要點包括：`);
+    olderPairs.forEach((p, i) => {
+      const shortReply = p.assistant.length > 80
+        ? p.assistant.slice(0, 80) + "……"
+        : p.assistant;
+      summaryLines.push(`  第${i + 1}輪回應摘要：${shortReply}`);
+    });
+    summaryLines.push(")");
+  }
+
+  // 近期對話完整保留
+  recentPairs.forEach((p) => {
+    fullPairs.push(`對方：${p.user}`);
+    fullPairs.push(`你：${p.assistant}`);
+  });
+
+  const sceneNote = sceneName ? `在${sceneName}` : "";
+  const header = `【過去的對話記憶】\n你和這個人${sceneNote}已經聊過了。以下是你們說過的話，保持前後一致，不要說出與此矛盾的內容：`;
+
+  const body = [
+    ...summaryLines,
+    ...(summaryLines.length && fullPairs.length ? ["—— 近期對話 ——"] : []),
+    ...fullPairs,
+  ].join("\n");
+
+  return `\n${header}\n${body}`;
+}
+
+// ── 觸發條件區塊 ──────────────────────────────────────────────
+
+function buildTriggerSection(npcId: string, ctx?: PlayerContext): string {
+  if (!ctx) return "";
+
+  const triggered = getTriggeredPrompts(npcId, ctx);
+  if (triggered.length === 0) return "";
+
+  // 最多注入 2 個觸發器，避免 prompt 過長
+  return "\n" + triggered.slice(0, 2).join("\n\n");
+}
+
 // ── 主函式：buildNpcPrompt()──────────────────────────────────
 export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   const {
@@ -138,6 +249,9 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
     availableClues,
     truthString,
     playerIdentity,
+    currentSceneId,
+    conversationMemory,
+    playerContext,
   } = params;
 
   // 1. 載入 NPC 定義
@@ -147,22 +261,39 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   // 2. 基礎人設
   const sections: string[] = [npc.basePrompt];
 
-  // 3. 注入當前幕次情境
+  // 3. NPC 關係知識（讓 NPC 知道他認識的人）
+  const relContext = buildRelationshipContext(npcId);
+  if (relContext) sections.push(relContext);
+
+  // 4. 注入當前幕次情境
   const actState = npc.actStateMap[currentAct] ?? npc.actStateMap[1];
   sections.push(`\n【當前時間情境 — 第 ${currentAct} 幕】\n${actState}`);
 
-  // 4. 篩選並注入線索
-  const clues = availableClues ?? npc.clues;
+  // 5. 當前場景（若非 NPC 主場景才注入）
+  if (currentSceneId) {
+    const sceneCtx = buildSceneContext(npcId, currentSceneId);
+    if (sceneCtx) sections.push(sceneCtx);
+  }
+
+  // 6. 對話記憶注入
+  if (conversationMemory) sections.push(conversationMemory);
+
+  // 7. 觸發條件（基於玩家當前遊戲狀態）
+  const triggerSection = buildTriggerSection(npcId, playerContext);
+  if (triggerSection) sections.push(triggerSection);
+
+  // 8. 篩選並注入線索
+  const clues    = availableClues ?? npc.clues;
   const filtered = filterAvailableClues(clues, npcState, playerStats, currentAct);
   sections.push(`\n${buildClueBlock(filtered)}`);
 
-  // 5. Route B 行為限制
+  // 9. Route B 行為限制
   if (playerRoute === "B") {
     const constraint = buildRouteBConstraint(playerStats);
     if (constraint) sections.push(constraint);
   }
 
-  // 6. 玩家身份提示（第二相體才注入）
+  // 10. 玩家身份提示（第二相體才注入）
   if (playerIdentity === "phase2") {
     sections.push(
       "\n【玩家特殊狀態】\n" +
