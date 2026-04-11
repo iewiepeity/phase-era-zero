@@ -5,6 +5,8 @@
 
 export * from "./narrative";
 export * from "./prologue";
+export * from "./difficulty";
+export * from "./achievements";
 export * from "./endings";
 export * from "./npc-chen-jie";
 export * from "./npc-hanzhuo";

@@ -91,8 +91,8 @@ export default function IdentityPage() {
       // silently continue — localStorage 已存，遊戲可正常進行
     }
 
-    // 3. 導向遊戲主畫面
-    router.push(`/game/${sessionId}`);
+    // 3. 導向難度選擇
+    router.push(`/game/${sessionId}/difficulty`);
   }
 
   return (

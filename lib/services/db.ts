@@ -124,6 +124,45 @@ export async function getGameSession(sessionId: string): Promise<{
 }
 
 /**
+ * 寫入難度選擇（easy / normal / hard，nightmare 對應到 hard）。
+ * 在 difficulty 頁選完後呼叫。
+ */
+export async function updateDifficulty(
+  sessionId: string,
+  difficulty: "easy" | "normal" | "hard",
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db
+      .from("game_sessions")
+      .update({ difficulty })
+      .eq("id", sessionId);
+  } catch (e) {
+    console.warn("[db] updateDifficulty:", e);
+  }
+}
+
+/**
+ * 更新當前幕次（1 或 2，對應 DB current_act INTEGER）。
+ */
+export async function updateCurrentAct(
+  sessionId: string,
+  act: number,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db
+      .from("game_sessions")
+      .update({ current_act: act })
+      .eq("id", sessionId);
+  } catch (e) {
+    console.warn("[db] updateCurrentAct:", e);
+  }
+}
+
+/**
  * 寫入玩家身份選擇（normal / phase2）。
  * 在 identity 頁選完後呼叫。
  */

@@ -26,6 +26,12 @@ export const STORAGE_KEYS = {
   RESULT:     (sessionId: string) => `pez_result_${sessionId}`,
   /** 本局玩家身份（identity 頁選完後存入）*/
   IDENTITY:   (sessionId: string) => `pez_identity_${sessionId}`,
+  /** 本局難度選擇（difficulty 頁選完後存入）*/
+  DIFFICULTY: (sessionId: string) => `pez_difficulty_${sessionId}`,
+  /** 本局已訪問場景清單（逗號分隔）*/
+  VISITED_SCENES: (sessionId: string) => `pez_visited_${sessionId}`,
+  /** 本局已解鎖成就清單（逗號分隔）*/
+  ACHIEVEMENTS: (sessionId: string) => `pez_achievements_${sessionId}`,
 } as const;
 
 // ── NPC 色彩配置 ───────────────────────────────────────────────
