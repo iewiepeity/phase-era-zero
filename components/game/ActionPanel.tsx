@@ -8,8 +8,8 @@ import type { ActionOption } from "@/lib/content/action-options";
 const STORAGE_KEY = "pez_action_panel_open";
 
 const TYPE_ICON: Record<ActionOption["type"], string> = {
-  explore:  "🔍",
-  chat:     "💬",
+  explore:  "◈",
+  chat:     "◎",
   navigate: "→",
   leave:    "←",
 };
@@ -87,10 +87,10 @@ export function ActionPanel({
       >
         <div className="flex items-center gap-2">
           <span
-            className="text-base leading-none"
-            style={{ filter: `drop-shadow(0 0 4px ${accentColor}80)` }}
+            className="font-mono-sys text-[9px] leading-none"
+            style={{ color: `${accentColor}90` }}
           >
-            💡
+            ◆
           </span>
           {open && (
             <span

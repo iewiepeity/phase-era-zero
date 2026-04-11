@@ -78,6 +78,7 @@ export default function ScenePage() {
 
   // State
   const [interactedItems, setInteractedItems] = useState<Set<string>>(new Set());
+  const [revealedItems,   setRevealedItems]   = useState<Set<string>>(new Set());
   const [activeItem,      setActiveItem]      = useState<SceneItem | null>(null);
   const [actionDone,      setActionDone]      = useState(false);
   const [introShown,      setIntroShown]      = useState(false);
@@ -94,11 +95,17 @@ export default function ScenePage() {
 
   // On mount: load state + record visit + sync DB
   useEffect(() => {
-    // Load localStorage
+    // Load interacted items
     const key = STORAGE_KEYS.SCENE_INTERACTED(sessionId, sceneId);
     const raw = localStorage.getItem(key) ?? "";
     const ids = new Set(raw.split(",").filter(Boolean));
     setInteractedItems(ids);
+
+    // Load revealed items (exploration mechanic)
+    const revKey = `pez_revealed_${sessionId}_${sceneId}`;
+    const revRaw = localStorage.getItem(revKey) ?? "";
+    const revIds = new Set(revRaw.split(",").filter(Boolean));
+    setRevealedItems(revIds);
 
     // Record scene visit
     fetch("/api/game/scene/visits", {
@@ -128,6 +135,33 @@ export default function ScenePage() {
       return () => clearTimeout(t);
     }
   }, [introDone, introShown]);
+
+  // 揭露 1-2 個未探索的物件
+  function revealNextItems() {
+    const nonNpcItems = items.filter((i) => i.type !== "npc");
+    const unrevealed  = nonNpcItems.filter(
+      (i) => !revealedItems.has(i.id) && !interactedItems.has(i.id),
+    );
+    if (unrevealed.length === 0) return;
+    const count    = Math.min(2, unrevealed.length);
+    const shuffled = [...unrevealed].sort(() => Math.random() - 0.5);
+    const toReveal = shuffled.slice(0, count);
+    setRevealedItems((prev) => {
+      const next = new Set(prev);
+      toReveal.forEach((i) => next.add(i.id));
+      localStorage.setItem(
+        `pez_revealed_${sessionId}_${sceneId}`,
+        [...next].join(","),
+      );
+      return next;
+    });
+  }
+
+  // 判斷某物件是否可見（NPC 始終可見，其餘需探索後揭露）
+  function isItemVisible(item: SceneItem): boolean {
+    if (item.type === "npc") return true;
+    return revealedItems.has(item.id) || interactedItems.has(item.id);
+  }
 
   const markInteracted = useCallback(
     (itemId: string) => {
@@ -336,7 +370,7 @@ export default function ScenePage() {
 
         {/* Action suggestions */}
         {SCENE_ACTIONS[sceneId] && (
-          <div className="mb-8">
+          <div className="mb-6">
             <ActionPanel
               options={SCENE_ACTIONS[sceneId]}
               accentColor={palette.accent}
@@ -346,6 +380,43 @@ export default function ScenePage() {
             />
           </div>
         )}
+
+        {/* 調查區域 — 每次揭露 1-2 件物品 */}
+        {(() => {
+          const nonNpc    = items.filter((i) => i.type !== "npc");
+          const unrevealed = nonNpc.filter(
+            (i) => !revealedItems.has(i.id) && !interactedItems.has(i.id),
+          );
+          if (unrevealed.length === 0 && revealedItems.size === 0) return null;
+          return (
+            <div className="mb-8 flex items-center gap-3">
+              {unrevealed.length > 0 ? (
+                <button
+                  onClick={revealNextItems}
+                  className="flex items-center gap-2 px-4 py-2 rounded border font-mono-sys text-[10px] tracking-[0.25em] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{
+                    borderColor: `${palette.accent}40`,
+                    color:       `${palette.accent}80`,
+                    background:  `${palette.accent}08`,
+                  }}
+                >
+                  <span className="text-[9px]">▣</span>
+                  調查區域
+                </button>
+              ) : (
+                <span className="font-mono-sys text-[9px] tracking-widest text-[#e2c9a0]/25">
+                  AREA FULLY EXPLORED
+                </span>
+              )}
+              <span
+                className="font-mono-sys text-[9px] tracking-widest"
+                style={{ color: `${palette.accent}35` }}
+              >
+                {revealedItems.size + interactedItems.size}/{nonNpc.length} 物件已揭露
+              </span>
+            </div>
+          );
+        })()}
 
         {/* Items grouped by type */}
         <div className="space-y-8">
@@ -370,7 +441,7 @@ export default function ScenePage() {
 
                 {/* Item cards */}
                 <div className="space-y-2">
-                  {group.map((item) => {
+                  {group.filter((item) => isItemVisible(item)).map((item) => {
                     const interacted = interactedItems.has(item.id);
                     const npcColor   = item.npcId ? (NPC_COLORS[item.npcId] ?? DEFAULT_NPC_COLOR) : null;
                     const cardAccent = type === "npc" && npcColor
@@ -400,9 +471,18 @@ export default function ScenePage() {
                             : undefined,
                         }}
                       >
-                        {/* Icon */}
-                        <span className="text-lg leading-none shrink-0" style={{ opacity: interacted ? 0.5 : 1 }}>
-                          {item.icon}
+                        {/* Icon — 幾何符號，依 type 決定 */}
+                        <span
+                          className="font-mono-sys text-[13px] w-5 text-center shrink-0 leading-none"
+                          style={{
+                            color:   cardAccent,
+                            opacity: interacted ? 0.4 : 0.75,
+                          }}
+                        >
+                          {item.type === "npc"         ? "◎"
+                           : item.type === "clue"      ? "◈"
+                           : item.type === "environment" ? "◇"
+                           : "▣"}
                         </span>
 
                         {/* Text */}
@@ -478,7 +558,7 @@ export default function ScenePage() {
                     background:  "rgba(13,17,23,0.6)",
                   }}
                 >
-                  <span className="text-lg leading-none shrink-0 opacity-60">{rNpc.icon}</span>
+                  <span className="font-mono-sys text-[13px] w-5 text-center shrink-0 leading-none opacity-45 text-[#e2c9a0]">◎</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p
@@ -539,7 +619,15 @@ export default function ScenePage() {
 
             {/* Item header */}
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl leading-none">{activeItem.icon}</span>
+              <span
+                className="font-mono-sys text-xl leading-none w-8 text-center"
+                style={{ color: palette.accent, opacity: 0.7 }}
+              >
+                {activeItem.type === "npc"          ? "◎"
+                 : activeItem.type === "clue"       ? "◈"
+                 : activeItem.type === "environment" ? "◇"
+                 : "▣"}
+              </span>
               <div>
                 <h2
                   className="text-base tracking-widest text-[#e2c9a0]/85"

@@ -171,7 +171,7 @@ export default function CluesPage() {
           <>
             {regularClues.length === 0 && deducedClues.length === 0 ? (
               <div className="flex flex-col items-center py-16 gap-3">
-                <span className="text-3xl opacity-20">🔍</span>
+                <span className="font-mono-sys text-2xl opacity-20">◈</span>
                 <p
                   className="text-sm text-[#e2c9a0]/30 text-center"
                   style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}

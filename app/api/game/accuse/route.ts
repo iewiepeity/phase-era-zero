@@ -7,7 +7,30 @@ import {
   getTalkedNpcs,
 } from "@/lib/services/db";
 import { checkAndUnlockAchievements } from "@/lib/services/achievements";
+import { SUSPECTS, MOTIVES } from "@/lib/case-config";
 import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
+
+/** local_ session（無 Supabase）時，以 sessionId hash 產生確定性答案 */
+function buildLocalSession(sessionId: string) {
+  const hash    = sessionId.replace(/^local_/, "").split("_")[0] ?? "0";
+  const seed    = parseInt(hash, 36) % 10000;
+  const killerKeys = Object.keys(SUSPECTS) as KillerId[];
+  const motiveKeys = Object.keys(MOTIVES) as MotiveDirection[];
+  const subIds  = ["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"] as SubMotiveId[];
+  const killer  = killerKeys[seed % killerKeys.length];
+  const motive  = motiveKeys[seed % motiveKeys.length];
+  const sub     = subIds[seed % subIds.length];
+  return {
+    id:               sessionId,
+    killer_id:        killer,
+    motive_direction: motive,
+    truth_string:     `P${motive}0-${sub}-0000`,
+    player_name:      "local",
+    status:           "active" as const,
+    difficulty:       "normal",
+    player_identity:  "normal",
+  };
+}
 
 // ── POST /api/game/accuse ─────────────────────────────────────
 // 玩家提交指控：killerId + motiveDirection + subMotiveId
@@ -43,11 +66,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. 取得本局正確答案
-    const session = await getGameSession(sessionId);
+    // 1. 取得本局正確答案（無 Supabase 時使用本地確定性答案）
+    const dbSession = await getGameSession(sessionId);
+    const session   = dbSession ?? (sessionId.startsWith("local_") ? buildLocalSession(sessionId) : null);
     if (!session) {
       return NextResponse.json(
-        { error: "not_found", message: "找不到對應的遊戲場次。" },
+        { error: "not_found", message: "找不到對應的遊戲場次。請確認遊戲是否已正確建立。" },
         { status: 404 },
       );
     }

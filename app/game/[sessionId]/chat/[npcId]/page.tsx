@@ -67,7 +67,7 @@ export default function GameChatPage() {
               boxShadow:   `0 0 20px ${npcColor.dot}20`,
             }}
           >
-            <span style={{ color: npcColor.dot }} className="text-base mt-0.5 shrink-0">🔍</span>
+            <span style={{ color: npcColor.dot }} className="font-mono-sys text-[11px] mt-0.5 shrink-0">◈</span>
             <div className="flex-1 min-w-0">
               <p className="font-mono-sys text-[10px] tracking-widest mb-1" style={{ color: npcColor.dot }}>
                 發現新線索

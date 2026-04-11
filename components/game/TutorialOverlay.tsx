@@ -12,15 +12,15 @@ interface TutorialStep {
 }
 
 const SCENE_STEPS: TutorialStep[] = [
-  { emoji: "👁",  title: "檢查物件", body: "點擊場景中的任何物品，可以查看詳細說明並收集線索。" },
-  { emoji: "💬", title: "與人對話", body: "點擊 NPC（人物）可進入對話模式，深入詢問目擊資訊。" },
-  { emoji: "🔍", title: "收集線索", body: "每個場景都藏有線索。蒐集夠多，就能找到真相。" },
+  { emoji: "◇", title: "檢查物件", body: "點擊場景中的任何物品，可以查看詳細說明並收集線索。" },
+  { emoji: "◎", title: "與人對話", body: "點擊 NPC（人物）可進入對話模式，深入詢問目擊資訊。" },
+  { emoji: "◈", title: "收集線索", body: "每個場景都藏有線索。蒐集夠多，就能找到真相。" },
 ];
 
 const CHAT_STEPS: TutorialStep[] = [
-  { emoji: "✍️", title: "自由輸入",  body: "你可以在下方輸入任何問題，NPC 會根據目前信任度回答。" },
-  { emoji: "💡", title: "問話建議", body: "上方的建議問題已為你整理好切入點，點擊即可直接使用。" },
-  { emoji: "📈", title: "建立信任",  body: "信任度越高，NPC 說的話越直接，隱藏的資訊也會浮現。" },
+  { emoji: "▣", title: "自由輸入",  body: "你可以在下方輸入任何問題，NPC 會根據目前信任度回答。" },
+  { emoji: "◆", title: "問話建議", body: "上方的建議問題已為你整理好切入點，點擊即可直接使用。" },
+  { emoji: "▲", title: "建立信任",  body: "信任度越高，NPC 說的話越直接，隱藏的資訊也會浮現。" },
 ];
 
 const storageKey = (kind: TutorialKind): string =>
@@ -89,7 +89,7 @@ export function TutorialOverlay({ kind }: TutorialOverlayProps) {
 
         {/* 內容 */}
         <div className="text-center space-y-3 mb-5">
-          <span className="text-3xl">{current.emoji}</span>
+          <span className="font-mono-sys text-2xl text-[#5bb8ff]/60">{current.emoji}</span>
           <h3
             className="text-base tracking-widest text-[#e2c9a0]/85"
             style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}

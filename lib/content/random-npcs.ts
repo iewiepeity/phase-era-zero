@@ -38,7 +38,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "遛狗的大叔",
     profession:  "退休，每天遛狗",
     appearance:  "六十出頭，穿夾克，手上有一根細繩，繩子另一端是一隻老柴犬",
-    icon:        "🐕",
+    icon:        "▣",
     personality: "talky",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy", "foggy_port", "crime_scene"],
     systemPrompt:
@@ -64,7 +64,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "買菜的阿嬤",
     profession:  "家庭主婦，每天早上買菜",
     appearance:  "七十歲上下，紅白格子袋，動作很快，看人的眼神精準",
-    icon:        "🛍️",
+    icon:        "▣",
     personality: "talky",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy"],
     systemPrompt:
@@ -90,7 +90,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "抽菸的上班族",
     profession:  "保險公司文書，三十幾歲",
     appearance:  "白襯衫，袖子捲起來，夾著一根菸，眼神有點散",
-    icon:        "🚬",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy", "ninth_precinct", "btma_lobby", "zhengbo_office"],
     systemPrompt:
@@ -116,7 +116,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "算命師",
     profession:  "街頭算命，自稱「看氣場的人」",
     appearance:  "五十多歲，穿長衫，攤子上有幾張圖，說話方式很獨特",
-    icon:        "🔮",
+    icon:        "▣",
     personality: "talky",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy"],
     systemPrompt:
@@ -142,7 +142,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "失眠的老人",
     profession:  "退休，失眠症患者，每晚出來散步",
     appearance:  "七十多歲，穿睡衣外加一件外套，眼睛有些紅，步伐很慢",
-    icon:        "🌙",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "foggy_port", "ninth_precinct", "crime_scene"],
     systemPrompt:
@@ -168,7 +168,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "街頭藝人",
     profession:  "街頭音樂人，表演小提琴",
     appearance:  "二十幾歲，黑色外套，提琴盒放在地上，神情很平靜",
-    icon:        "🎻",
+    icon:        "▣",
     personality: "cold",
     scenes:      ["chen_jie_noodles", "crime_scene", "ninth_precinct"],
     systemPrompt:
@@ -196,7 +196,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "晨跑的人",
     profession:  "上班族，晨跑習慣多年",
     appearance:  "三十多歲，運動服，戴著耳機，但耳機沒有播放",
-    icon:        "🏃",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["foggy_port", "crime_scene", "abandoned_warehouse", "chen_jie_noodles"],
     systemPrompt:
@@ -222,7 +222,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "拾荒者",
     profession:  "撿廢品維生",
     appearance:  "穿著厚重，推著一輛裝滿紙板的推車，眼神靈活",
-    icon:        "🛒",
+    icon:        "▣",
     personality: "nervous",
     scenes:      ["foggy_port", "crime_scene", "abandoned_warehouse", "bai_qiu_pharmacy"],
     systemPrompt:
@@ -248,7 +248,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "攝影愛好者",
     profession:  "業餘攝影，拍城市紀錄片",
     appearance:  "掛著相機，背包，走路很慢，眼睛會突然停在某個地方",
-    icon:        "📷",
+    icon:        "▣",
     personality: "talky",
     scenes:      ["crime_scene", "foggy_port", "old_city", "chen_jie_noodles", "bai_qiu_pharmacy"],
     systemPrompt:
@@ -276,7 +276,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "等公車的學生",
     profession:  "大學生，念理工科",
     appearance:  "二十出頭，揹著大包包，耳機掛在脖子上，看起來在想事情",
-    icon:        "🎒",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "ninth_precinct", "btma_lobby", "lin_lab"],
     systemPrompt:
@@ -302,7 +302,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "外送員",
     profession:  "外送平台員工",
     appearance:  "二十幾歲，騎著電動車，戴安全帽，臉有點曬黑",
-    icon:        "🛵",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy", "ninth_precinct", "medical_center"],
     systemPrompt:
@@ -328,7 +328,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "迷路的遊客",
     profession:  "外地遊客，第一次來這個城市",
     appearance:  "三十幾歲，拿著手機看地圖，看起來有些困惑",
-    icon:        "🗺️",
+    icon:        "▣",
     personality: "nervous",
     scenes:      ["chen_jie_noodles", "crime_scene", "btma_lobby"],
     systemPrompt:
@@ -356,7 +356,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "下班的護士",
     profession:  "中央醫療院護士，剛結束夜班",
     appearance:  "穿著便服但帶著醫院的識別證，臉很疲憊，喝著咖啡",
-    icon:        "☕",
+    icon:        "▣",
     personality: "cold",
     scenes:      ["medical_center", "chen_jie_noodles", "bai_qiu_pharmacy"],
     systemPrompt:
@@ -382,7 +382,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "實驗室助理",
     profession:  "大學研究助理，念碩士二年級",
     appearance:  "戴眼鏡，穿實驗衣，手上有一個夾板",
-    icon:        "🧪",
+    icon:        "▣",
     personality: "nervous",
     scenes:      ["lin_lab", "medical_center", "btma_lobby"],
     systemPrompt:
@@ -410,7 +410,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "醉漢",
     profession:  "不詳，喝了點酒",
     appearance:  "四十多歲，手裡拿著半瓶酒，走路還算穩，但眼神有點飄",
-    icon:        "🍶",
+    icon:        "▣",
     personality: "talky",
     scenes:      ["chen_jie_noodles", "foggy_port", "bai_qiu_pharmacy", "crime_scene"],
     systemPrompt:
@@ -436,7 +436,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "修水管的工人",
     profession:  "水電工",
     appearance:  "四十多歲，工作服，工具袋，滿身汗",
-    icon:        "🔧",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy", "medical_center", "btma_lobby"],
     systemPrompt:
@@ -462,7 +462,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "臨時保安",
     profession:  "臨時工，派駐在不同地點",
     appearance:  "二十幾歲，制服有點大，戴著臨時通行證",
-    icon:        "🪪",
+    icon:        "▣",
     personality: "nervous",
     scenes:      ["btma_lobby", "ninth_precinct", "medical_center", "abandoned_warehouse"],
     systemPrompt:
@@ -488,7 +488,7 @@ export const RANDOM_NPC_POOL: RandomNpcTemplate[] = [
     name:        "帶小孩的媽媽",
     profession:  "全職媽媽，帶孩子出來散步",
     appearance:  "三十幾歲，推著嬰兒車，看起來沒有睡夠",
-    icon:        "👶",
+    icon:        "▣",
     personality: "casual",
     scenes:      ["chen_jie_noodles", "bai_qiu_pharmacy", "crime_scene"],
     systemPrompt:

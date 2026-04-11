@@ -187,7 +187,7 @@ export default function MapPage() {
                             {scene.name}
                           </p>
                           {locked ? (
-                            <span className="text-[10px] shrink-0 opacity-40">🔒</span>
+                            <span className="font-mono-sys text-[10px] shrink-0 opacity-40">×</span>
                           ) : visited ? (
                             <span style={{ color: palette.accent }} className="text-xs shrink-0">◆</span>
                           ) : null}

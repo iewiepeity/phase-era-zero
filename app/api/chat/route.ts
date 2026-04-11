@@ -302,6 +302,13 @@ export async function POST(req: NextRequest) {
         { status: 429 },
       );
     }
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("GEMINI_API_KEY")) {
+      return NextResponse.json(
+        { error: "config_error", message: "伺服器尚未設定 AI 金鑰，請聯繫管理員。" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { error: "server_error", message: "伺服器暫時出了點問題。" },
       { status: 500 },

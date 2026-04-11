@@ -213,7 +213,7 @@ export default function IdentityPage() {
                       color:      `${opt.accentColor}70`,
                     }}
                   >
-                    ⚠ {opt.warning}
+                    ▲ {opt.warning}
                   </p>
                 )}
               </button>

@@ -135,7 +135,7 @@ export default function NotebookPage() {
                 : "border-[#e2c9a0]/10 text-[#e2c9a0]/30 hover:border-[#e2c9a0]/22"
             }`}
           >
-            📓 全局
+            全局
           </button>
 
           {ALL_NPCS.map((npc) => {

@@ -25,6 +25,9 @@ export async function callGeminiChat(
   history:      ChatMessage[],
   userMessage:  string,
 ): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY 未設定。請在 .env.local 中加入 GEMINI_API_KEY=<你的金鑰>。");
+  }
   const model = genAI.getGenerativeModel({
     model:             GEMINI_MODEL,
     systemInstruction: systemPrompt,
