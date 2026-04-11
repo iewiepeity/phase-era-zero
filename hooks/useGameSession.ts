@@ -70,7 +70,7 @@ export function useGameSession(): UseGameSessionReturn {
       }
 
       localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId);
-      router.push(`/game/${data.sessionId}`);
+      router.push(`/game/${data.sessionId}/intro`);
     } catch {
       setError("連線失敗，請確認網路後重試。");
     } finally {

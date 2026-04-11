@@ -28,8 +28,9 @@ export interface BuildNpcPromptParams {
   playerRoute: "A" | "B";
   playerStats: PlayerStats;
   npcState: NpcState;
-  availableClues?: Clue[];   // 若不傳，使用 registry 的預設線索
-  truthString?: string;      // 後端用，不送前端
+  availableClues?: Clue[];                    // 若不傳，使用 registry 的預設線索
+  truthString?: string;                       // 後端用，不送前端
+  playerIdentity?: "normal" | "phase2";       // 一般人 or 第二相體
 }
 
 // ── 預設 PlayerStats（訪客/Phase 2 暫用）──────────────────────
@@ -136,6 +137,7 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
     npcState,
     availableClues,
     truthString,
+    playerIdentity,
   } = params;
 
   // 1. 載入 NPC 定義
@@ -158,6 +160,15 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   if (playerRoute === "B") {
     const constraint = buildRouteBConstraint(playerStats);
     if (constraint) sections.push(constraint);
+  }
+
+  // 6. 玩家身份提示（第二相體才注入）
+  if (playerIdentity === "phase2") {
+    sections.push(
+      "\n【玩家特殊狀態】\n" +
+      "你面前這個人的氣息有些不尋常。你說不上來是什麼，但你本能地多留意了一分。" +
+      "如果你是第二相體，或者你對第二相體有研究，你的反應可以更細膩。"
+    );
   }
 
   // truthString 只在後端存，永遠不注入 Prompt

@@ -4,6 +4,7 @@
  */
 
 export * from "./narrative";
+export * from "./prologue";
 export * from "./endings";
 export * from "./npc-chen-jie";
 export * from "./npc-hanzhuo";

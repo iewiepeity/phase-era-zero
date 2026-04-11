@@ -24,6 +24,8 @@ export const STORAGE_KEYS = {
   SEEN_INTRO: (sessionId: string) => `pez_seen_intro_${sessionId}`,
   /** 本局結果快照（指控後存入，結局頁讀取）*/
   RESULT:     (sessionId: string) => `pez_result_${sessionId}`,
+  /** 本局玩家身份（identity 頁選完後存入）*/
+  IDENTITY:   (sessionId: string) => `pez_identity_${sessionId}`,
 } as const;
 
 // ── NPC 色彩配置 ───────────────────────────────────────────────

@@ -124,6 +124,26 @@ export async function getGameSession(sessionId: string): Promise<{
 }
 
 /**
+ * 寫入玩家身份選擇（normal / phase2）。
+ * 在 identity 頁選完後呼叫。
+ */
+export async function updatePlayerIdentity(
+  sessionId: string,
+  identity:  "normal" | "phase2",
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db
+      .from("game_sessions")
+      .update({ player_identity: identity })
+      .eq("id", sessionId);
+  } catch (e) {
+    console.warn("[db] updatePlayerIdentity:", e);
+  }
+}
+
+/**
  * 標記 session 為已完成，寫入結局與分數。
  */
 export async function completeGameSession(

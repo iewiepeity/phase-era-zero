@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { SCENES } from "@/lib/scene-config";
-import { STORAGE_KEYS, INTRO_TYPING_MS } from "@/lib/constants";
-import { useTypewriter } from "@/hooks/useTypewriter";
 import { SceneCard } from "@/components/game/SceneCard";
-import { GAME_INTRO } from "@/lib/content/narrative";
 import type { Scene } from "@/lib/scene-config";
 
 export default function GameHubPage() {
@@ -15,46 +12,11 @@ export default function GameHubPage() {
   const sessionId = params.sessionId as string;
   const router    = useRouter();
 
-  const [showIntro, setShowIntro] = useState(false);
-  const [introDone, setIntroDone] = useState(false);
-  const [showHub,   setShowHub]   = useState(false);
+  const [showHub, setShowHub] = useState(false);
 
-  const hasMounted = useRef(false);
-
-  const { displayed, isDone, skip } = useTypewriter({
-    text:    GAME_INTRO,
-    speed:   INTRO_TYPING_MS,
-    enabled: showIntro && !introDone,
-  });
-
-  // isDone 由打字機回報，同步 introDone 狀態
   useEffect(() => {
-    if (isDone && showIntro) setIntroDone(true);
-  }, [isDone, showIntro]);
-
-  // ── 初始化 ────────────────────────────────────────────────
-  useEffect(() => {
-    if (hasMounted.current) return;
-    hasMounted.current = true;
-
-    const seen = localStorage.getItem(STORAGE_KEYS.SEEN_INTRO(sessionId));
-    if (!seen) {
-      setShowIntro(true);
-    } else {
-      setShowHub(true);
-    }
-  }, [sessionId]);
-
-  const skipIntro = useCallback(() => {
-    skip();
-    setIntroDone(true);
-  }, [skip]);
-
-  function dismissIntro() {
-    localStorage.setItem(STORAGE_KEYS.SEEN_INTRO(sessionId), "1");
-    setShowIntro(false);
     setShowHub(true);
-  }
+  }, []);
 
   function handleEnterScene(scene: Scene) {
     if (scene.npcs.length > 0) {
@@ -62,54 +24,6 @@ export default function GameHubPage() {
     }
   }
 
-  // ── 開場白畫面 ────────────────────────────────────────────
-  if (showIntro) {
-    return (
-      <div className="min-h-screen flex flex-col bg-[#0d1117]">
-        <div className="fixed inset-0 bg-grid-static opacity-40 pointer-events-none" aria-hidden="true" />
-
-        <div className="relative z-10 flex-1 flex flex-col justify-center max-w-xl mx-auto w-full px-6">
-          {/* 上方 meta 標籤 */}
-          <div className="mb-8 flex items-center gap-2">
-            <span className="font-mono-sys text-[10px] text-[#5bb8ff]/35 tracking-widest">
-              PEO2 / INCIDENT BRIEF
-            </span>
-            <span className="flex-1 h-px bg-[#5bb8ff]/12" />
-          </div>
-
-          {/* 敘述文字 */}
-          <div
-            className="text-sm leading-[2.1] text-[#e2c9a0]/80 whitespace-pre-wrap mb-10"
-            style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
-          >
-            {displayed}
-            {!introDone && <span className="typing-cursor" />}
-          </div>
-
-          {/* 操作按鈕 */}
-          <div className="flex items-center gap-6">
-            {!introDone ? (
-              <button
-                onClick={skipIntro}
-                className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/55 tracking-widest transition-colors"
-              >
-                略過 →
-              </button>
-            ) : (
-              <button
-                onClick={dismissIntro}
-                className="px-8 py-3 border border-[#ff3864]/55 text-[#ff3864] text-sm tracking-[0.25em] hover:bg-[#ff3864]/10 hover:border-[#ff3864]/80 transition-all duration-300 rounded glow-box-accent animate-fade-in"
-              >
-                開始調查
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── 遊戲主畫面 ────────────────────────────────────────────
   if (!showHub) return null;
 
   return (
