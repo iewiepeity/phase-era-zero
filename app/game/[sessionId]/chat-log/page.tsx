@@ -7,6 +7,43 @@ import { getNpc } from "@/lib/npc-registry";
 import { NPC_COLORS, DEFAULT_NPC_COLOR } from "@/lib/constants";
 import type { ChatLogByNpc } from "@/app/api/game/chat-log/route";
 
+// ── 匯出工具 ──────────────────────────────────────────────────
+
+function exportChatLog(groups: ChatLogByNpc[], sessionId: string) {
+  const lines: string[] = [
+    "═══════════════════════════════════════",
+    "  相變世紀 — 對話紀錄",
+    `  Session: ${sessionId}`,
+    `  匯出時間: ${new Date().toLocaleString("zh-TW")}`,
+    "═══════════════════════════════════════",
+    "",
+  ];
+
+  for (const g of groups) {
+    const npc = getNpc(g.npcId);
+    lines.push(`▌ ${npc?.name ?? g.npcId}　${npc?.location ?? ""}　（${g.messages.length} 則）`);
+    lines.push("─".repeat(40));
+    for (const msg of g.messages) {
+      const time   = (() => { try { return new Date(msg.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } })();
+      const prefix = msg.role === "user" ? "你" : (npc?.name ?? "NPC");
+      lines.push(`[${time}] ${prefix}：${msg.content}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("═══════════════════════════════════════");
+
+  const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `phase-zero-chat-${sessionId.slice(0, 8)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── 主元件 ───────────────────────────────────────────────────
 
 export default function ChatLogPage() {
@@ -73,7 +110,17 @@ export default function ChatLogPage() {
           <p className="font-mono-sys text-[10px] text-[#5bb8ff]/40 tracking-[0.4em] uppercase">
             對話紀錄
           </p>
-          <div className="w-14" />
+          {!loading && !error && groups.length > 0 ? (
+            <button
+              onClick={() => exportChatLog(groups, sessionId)}
+              className="font-mono-sys text-[9px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 tracking-widest transition-colors border border-[#e2c9a0]/10 px-2 py-1 rounded hover:border-[#e2c9a0]/25"
+              title="匯出為 .txt"
+            >
+              匯出
+            </button>
+          ) : (
+            <div className="w-14" />
+          )}
         </header>
 
         {/* 搜尋列 */}

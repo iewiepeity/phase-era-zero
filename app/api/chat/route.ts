@@ -1,4 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// ── Rate Limit（每 session 每分鐘 20 則訊息）──────────────────
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX       = 20;
+
+interface RateBucket {
+  count:       number;
+  windowStart: number;
+}
+
+// 使用 Map 儲存各 session 的請求計數（in-memory，重啟清除）
+const rateLimitMap = new Map<string, RateBucket>();
+
+function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
+  const now    = Date.now();
+  const bucket = rateLimitMap.get(key);
+
+  if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(key, { count: 1, windowStart: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+
+  if (bucket.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  bucket.count += 1;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - bucket.count };
+}
+
 import {
   ensureSession,
   getNpcStateFromDb,
@@ -80,6 +110,19 @@ export async function POST(req: NextRequest) {
 
     if (!npcId) {
       return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：npcId" }, { status: 400 });
+    }
+
+    // Rate limit — 以 sessionId 或 guestId 為 key
+    const rlKey = sessionId ?? guestId ?? req.headers.get("x-forwarded-for") ?? "anon";
+    const rl    = checkRateLimit(rlKey);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "rate_limit", message: "訊息發送過於頻繁，請稍後再試（每分鐘上限 20 則）。" },
+        {
+          status: 429,
+          headers: { "Retry-After": "60", "X-RateLimit-Remaining": "0" },
+        },
+      );
     }
 
     // 1. 確保有 session

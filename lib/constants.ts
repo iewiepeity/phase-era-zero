@@ -97,6 +97,37 @@ export const NPC_COLORS: Record<string, { dot: string; bubble: string; border: s
     bubble: "rgba(163,230,53,0.05)",
     border: "rgba(163,230,53,0.14)",
   },
+  // ── 一般 NPC ──────────────────────────────────────────────────
+  guard: {
+    dot:    "#94a3b8",
+    bubble: "rgba(148,163,184,0.05)",
+    border: "rgba(148,163,184,0.15)",
+  },
+  reporter: {
+    dot:    "#fbbf24",
+    bubble: "rgba(251,191,36,0.05)",
+    border: "rgba(251,191,36,0.16)",
+  },
+  neighbor: {
+    dot:    "#f97316",
+    bubble: "rgba(249,115,22,0.05)",
+    border: "rgba(249,115,22,0.15)",
+  },
+  clerk: {
+    dot:    "#34d399",
+    bubble: "rgba(52,211,153,0.05)",
+    border: "rgba(52,211,153,0.15)",
+  },
+  taxi_driver: {
+    dot:    "#38bdf8",
+    bubble: "rgba(56,189,248,0.05)",
+    border: "rgba(56,189,248,0.15)",
+  },
+  professor: {
+    dot:    "#a78bfa",
+    bubble: "rgba(167,139,250,0.05)",
+    border: "rgba(167,139,250,0.15)",
+  },
 };
 
 /** 找不到指定 NPC 時的預設色 */

@@ -52,12 +52,13 @@ export const SCENES: Scene[] = [
     district:     "中城區　P.E. 02",
     districtArea: "old_city",
     description:
-      "老城區最後一間不裝監控的麵館。六張桌子，燈光有點黃。陳姐見過太多人進進出出。鄭博坐在角落，白秋偶爾從隔壁藥局走過來。",
+      "老城區最後一間不裝監控的麵館。六張桌子，燈光有點黃。陳姐見過太多人進進出出。鄭博坐在角落，白秋偶爾從隔壁藥局走過來。林太太有時候進來喝茶。",
     ambience:     "嘴巴嚴，但茶底不淡",
     npcs: [
       { id: "chen_jie", name: "陳姐" },
       { id: "zhengbo",  name: "鄭博" },
       { id: "baiqiu",   name: "白秋" },
+      { id: "neighbor", name: "林太太" },
     ],
     locked:      false,
     dangerLevel: "low",
@@ -68,11 +69,12 @@ export const SCENES: Scene[] = [
     district:     "舊城商業區",
     districtArea: "old_city",
     description:
-      "白秋的藥局緊鄰陳姐麵館，門面很窄，裡面比外面深。她知道哪些人在買不對的藥，知道哪些人失蹤之前來過這裡。鄭博也來過，不是買藥。",
+      "白秋的藥局緊鄰陳姐麵館，門面很窄，裡面比外面深。她知道哪些人在買不對的藥，知道哪些人失蹤之前來過這裡。旁邊的便利商店有個夜班店員，什麼都記著。",
     ambience:     "知道太多的人，通常說得最少",
     npcs: [
       { id: "baiqiu",  name: "白秋" },
       { id: "zhengbo", name: "鄭博" },
+      { id: "clerk",   name: "小劉" },
     ],
     locked:      false,
     dangerLevel: "low",
@@ -85,11 +87,12 @@ export const SCENES: Scene[] = [
     district:     "中城舊區暗巷",
     districtArea: "central",
     description:
-      "第十四號失蹤案最後的目擊座標。封鎖線還在，但警察已經走了。韓卓在周圍做記錄，林知夏蹲在角落寫什麼東西。",
+      "第十四號失蹤案最後的目擊座標。封鎖線還在，但警察已經走了。韓卓在周圍做記錄，林知夏蹲在角落寫什麼東西。一個記者在外圍拍照，不讓人靠近。",
     ambience:     "每一步都踩在別人留下的痕跡上",
     npcs: [
       { id: "hanzhuo",   name: "韓卓" },
       { id: "linzhixia", name: "林知夏" },
+      { id: "reporter",  name: "蘇磊" },
     ],
     locked:      false,
     dangerLevel: "medium",
@@ -115,11 +118,12 @@ export const SCENES: Scene[] = [
     district:     "中城核心商業區",
     districtArea: "central",
     description:
-      "把莊河的案子拿走的地方，把韓卓的嘴封住的地方。大廳看起來和普通辦公大樓沒有區別。謝先生在這裡等著，余霜熟門熟路地進出。",
+      "把莊河的案子拿走的地方，把韓卓的嘴封住的地方。大廳看起來和普通辦公大樓沒有區別。謝先生在這裡等著，余霜熟門熟路地進出。守門的老陳什麼都記著。",
     ambience:     "正式的外表之下，有些事沒有紀錄",
     npcs: [
       { id: "it",       name: "謝先生" },
       { id: "yushuang", name: "余霜" },
+      { id: "guard",    name: "老陳" },
     ],
     locked:      true,
     lockReason:  "需要先從其他地點蒐集關於 BTMA 的線索",
@@ -148,11 +152,12 @@ export const SCENES: Scene[] = [
     district:     "鋒岬港口",
     districtArea: "harbor",
     description:
-      "貨船在這裡裝卸的不只是貨物。至少兩名失蹤者的路線在這裡交叉。莊河坐在茶攤，陶生在工地忙進忙出。",
+      "貨船在這裡裝卸的不只是貨物。至少兩名失蹤者的路線在這裡交叉。莊河坐在茶攤，陶生在工地忙進忙出。魏師傅的車停在碼頭入口，等著下一個客人。",
     ambience:     "霧裡的東西不一定是霧",
     npcs: [
-      { id: "zhuanghe", name: "莊河" },
-      { id: "taosheng", name: "陶生" },
+      { id: "zhuanghe",   name: "莊河" },
+      { id: "taosheng",   name: "陶生" },
+      { id: "taxi_driver", name: "魏師傅" },
     ],
     locked:      false,
     dangerLevel: "medium",
@@ -195,11 +200,12 @@ export const SCENES: Scene[] = [
     district:     "賽德里斯大學　學院南區",
     districtArea: "academic",
     description:
-      "林知夏把這裡當成她的第二個案發現場。冷藏架上有十四份樣本，白板上的時間軸在林淵覺醒的日期之後停下來。韓卓偶爾來核對數據。",
+      "林知夏把這裡當成她的第二個案發現場。冷藏架上有十四份樣本，白板上的時間軸在林淵覺醒的日期之後停下來。韓卓偶爾來核對數據。方教授的研究室就在隔壁，燈常亮著。",
     ambience:     "她記錄的比她說的還要多",
     npcs: [
       { id: "linzhixia", name: "林知夏" },
       { id: "hanzhuo",   name: "韓卓" },
+      { id: "professor", name: "方教授" },
     ],
     locked:      false,
     dangerLevel: "medium",

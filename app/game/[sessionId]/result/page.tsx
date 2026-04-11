@@ -400,14 +400,20 @@ export default function ResultPage() {
             {/* 操作按鈕 */}
             <div className="flex flex-col gap-3">
               <Link
+                href={`/game/${sessionId}/share`}
+                className="w-full py-3.5 border border-[#5bb8ff]/40 text-[#5bb8ff]/80 text-sm tracking-[0.2em] hover:bg-[#5bb8ff]/06 hover:border-[#5bb8ff]/65 transition-all duration-300 rounded text-center"
+              >
+                分享成績
+              </Link>
+              <Link
                 href="/game"
-                className="w-full py-3.5 border border-[#ff3864]/55 text-[#ff3864] text-sm tracking-[0.2em] hover:bg-[#ff3864]/10 hover:border-[#ff3864]/80 transition-all duration-300 rounded text-center glow-box-accent"
+                className="w-full py-3 border border-[#ff3864]/55 text-[#ff3864] text-sm tracking-[0.2em] hover:bg-[#ff3864]/10 hover:border-[#ff3864]/80 transition-all duration-300 rounded text-center glow-box-accent"
               >
                 重新開局
               </Link>
               <Link
                 href={`/game/${sessionId}`}
-                className="w-full py-3 border border-[#e2c9a0]/10 text-[#e2c9a0]/35 text-sm tracking-[0.2em] hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/60 transition-all duration-300 rounded text-center"
+                className="w-full py-2.5 border border-[#e2c9a0]/10 text-[#e2c9a0]/35 text-sm tracking-[0.2em] hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/60 transition-all duration-300 rounded text-center"
               >
                 回到地圖
               </Link>
