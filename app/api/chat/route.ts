@@ -9,6 +9,10 @@ import {
   getTalkedNpcs,
   getCollectedClueIds,
   getInventoryItemIds,
+  getSessionMeta,
+  getCriticalClueCount,
+  updateCurrentAct,
+  addPlayerClue,
 } from "@/lib/services/db";
 import { callGeminiChat, isRateLimitError } from "@/lib/services/gemini";
 import {
@@ -17,12 +21,15 @@ import {
   detectMessageIntent,
   calcTrustIncrement,
   detectRevealedClue,
+  detectEvTrigger,
   filterAvailableClues,
   DEFAULT_PLAYER_STATS,
 } from "@/lib/npc-engine";
 import { getNpc } from "@/lib/npc-registry";
 import { buildNpcClues } from "@/lib/random-engine";
 import { getScene } from "@/lib/scene-config";
+import { checkAndUnlockAchievements } from "@/lib/services/achievements";
+import { checkActProgression } from "@/lib/services/act-progression";
 import type { ChatMessage } from "@/lib/types";
 import type { PlayerContext } from "@/lib/content/dialogue-triggers";
 
@@ -30,7 +37,11 @@ import type { PlayerContext } from "@/lib/content/dialogue-triggers";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
-  const npcId     = searchParams.get("npcId") ?? "chen_jie";
+  const npcId     = searchParams.get("npcId");
+
+  if (!npcId) {
+    return NextResponse.json({ error: "bad_request", message: "缺少必要參數：npcId" }, { status: 400 });
+  }
 
   if (!sessionId) {
     return NextResponse.json({ messages: [], npcState: null });
@@ -47,21 +58,29 @@ export async function POST(req: NextRequest) {
       messages,
       sessionId,
       guestId,
-      npcId        = "chen_jie",
+      npcId,
       currentAct   = 1,
       playerRoute  = "A",
       currentSceneId,
       visitedScenes  = [],
+      currentEv    = 0,
+      alreadyUnlockedAchievements = [],
     } = (await req.json()) as {
       messages:       ChatMessage[];
       sessionId?:     string;
       guestId?:       string;
-      npcId?:         string;
+      npcId:          string;
       currentAct?:    number;
       playerRoute?:   "A" | "B";
       currentSceneId?: string;
       visitedScenes?: string[];
+      currentEv?:     number;
+      alreadyUnlockedAchievements?: string[];
     };
+
+    if (!npcId) {
+      return NextResponse.json({ error: "bad_request", message: "缺少必要欄位：npcId" }, { status: 400 });
+    }
 
     // 1. 確保有 session
     const resolvedSessionId =
@@ -73,8 +92,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown NPC: ${npcId}` }, { status: 400 });
     }
 
-    // 3. 並行載入 NPC 狀態 + 對話歷史 + 玩家進度（用於觸發判斷）
-    const [npcState, historyData, talkedNpcs, clueIds, itemIds] = await Promise.all([
+    // 3. 並行載入所有需要的資料
+    const [npcState, historyData, talkedNpcs, clueIds, itemIds, sessionMeta] = await Promise.all([
       resolvedSessionId
         ? getNpcStateFromDb(resolvedSessionId, npcId)
         : Promise.resolve({ selfAffinity: 0, sharedClues: [], isExposed: false, lastSeenAct: 0 }),
@@ -84,7 +103,12 @@ export async function POST(req: NextRequest) {
       resolvedSessionId ? getTalkedNpcs(resolvedSessionId)       : Promise.resolve([]),
       resolvedSessionId ? getCollectedClueIds(resolvedSessionId) : Promise.resolve([]),
       resolvedSessionId ? getInventoryItemIds(resolvedSessionId) : Promise.resolve([]),
+      resolvedSessionId ? getSessionMeta(resolvedSessionId)      : Promise.resolve(null),
     ]);
+
+    // 取得難度與身份
+    const difficulty     = sessionMeta?.difficulty     ?? "normal";
+    const playerIdentity = sessionMeta?.playerIdentity ?? "normal";
 
     // 4. 取得所有 NPC 信任度（用於 trustLevel 觸發）
     const npcTrustLevels: Record<string, number> = { [npcId]: npcState.selfAffinity };
@@ -103,20 +127,27 @@ export async function POST(req: NextRequest) {
     const sceneName       = currentSceneId ? (getScene(currentSceneId)?.name ?? undefined) : undefined;
     const conversationMemory = buildConversationMemory(historyMessages, sceneName);
 
-    // 7. 組裝 System Prompt
+    // 7. 組裝 System Prompt（帶難度、EV、身份）
     const caseConfig   = resolvedSessionId ? await getCaseConfig(resolvedSessionId) : null;
     const dynamicClues = caseConfig ? buildNpcClues(npcId, caseConfig) : undefined;
+
+    const evPlayerStats = {
+      ...DEFAULT_PLAYER_STATS,
+      ev: Math.min(100, Math.max(0, currentEv)),
+    };
 
     const systemPrompt = buildNpcPrompt({
       npcId,
       currentAct,
       playerRoute,
-      playerStats:         DEFAULT_PLAYER_STATS,
+      playerStats:         evPlayerStats,
       npcState,
       availableClues:      dynamicClues,
       currentSceneId,
       conversationMemory,
       playerContext,
+      difficulty,
+      playerIdentity:      playerIdentity as "normal" | "phase2",
     });
 
     // 8. 呼叫 Gemini
@@ -127,10 +158,62 @@ export async function POST(req: NextRequest) {
     // 9. 計算信任增量 + 偵測揭露線索
     const intent         = detectMessageIntent(lastMessage.content);
     const trustDelta     = calcTrustIncrement(npc, intent);
-    const available      = filterAvailableClues(npc.clues, npcState, DEFAULT_PLAYER_STATS, currentAct);
+    const available      = filterAvailableClues(npc.clues, npcState, evPlayerStats, currentAct);
     const revealedClueId = detectRevealedClue(reply, available);
 
-    // 10. 非同步寫入 DB（不阻塞回應）
+    // 10. EV 更新（Route B 才累積）
+    const evDelta  = playerRoute === "B" ? detectEvTrigger(lastMessage.content) : 0;
+    const newEv    = Math.min(100, Math.max(0, currentEv + evDelta));
+
+    // 11. 自動把揭露線索寫入 player_clues（B1）
+    let discoveredClue: { id: string; text: string } | null = null;
+    if (revealedClueId && resolvedSessionId) {
+      const clueObj = available.find((c) => c.id === revealedClueId);
+      if (clueObj) {
+        // 避免重複加入：若 clueIds 裡已有就跳過
+        if (!clueIds.includes(revealedClueId)) {
+          await addPlayerClue(resolvedSessionId, {
+            clue_text:  clueObj.content,
+            clue_type:  "npc",
+            source_npc: npcId,
+            category:   "general",
+          });
+          discoveredClue = { id: revealedClueId, text: clueObj.content };
+        }
+      }
+    }
+
+    // 12. 幕次推進檢查（A5）
+    let actProgression: { advanced: boolean; newAct: number; unlockedScenes?: string[] } | null = null;
+    if (resolvedSessionId && currentAct < 2) {
+      const criticalCount = resolvedSessionId ? await getCriticalClueCount(resolvedSessionId) : clueIds.length;
+      const updatedTalked = new Set([...talkedNpcs, npcId]);
+      const progression   = checkActProgression(currentAct, criticalCount, updatedTalked.size);
+      if (progression.advanced) {
+        await updateCurrentAct(resolvedSessionId, progression.newAct);
+        actProgression = {
+          advanced:       true,
+          newAct:         progression.newAct,
+          unlockedScenes: progression.unlockedScenes,
+        };
+      }
+    }
+
+    // 13. 成就解鎖檢查（A2）
+    const newAchievements = checkAndUnlockAchievements(
+      {
+        clueCount:       clueIds.length + (discoveredClue ? 1 : 0),
+        talkedNpcCount:  talkedNpcs.length,
+        visitedSceneIds: visitedScenes,
+        npcTrustMap:     {
+          ...npcTrustLevels,
+          [npcId]: Math.min(100, npcState.selfAffinity + trustDelta),
+        },
+      },
+      alreadyUnlockedAchievements,
+    );
+
+    // 14. 非同步寫入 DB（不阻塞回應）
     if (resolvedSessionId) {
       saveChatMessages(resolvedSessionId, npcId, lastMessage.content, reply);
       updateNpcState(resolvedSessionId, npcId, trustDelta, revealedClueId);
@@ -142,6 +225,10 @@ export async function POST(req: NextRequest) {
       trustDelta,
       newTrustLevel: Math.min(100, npcState.selfAffinity + trustDelta),
       revealedClueId,
+      discoveredClue,
+      newEv,
+      actProgression,
+      newAchievements: newAchievements.map((a) => ({ id: a.id, name: a.name })),
     });
   } catch (err) {
     console.error("[POST /api/chat]", err);

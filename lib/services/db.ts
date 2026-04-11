@@ -110,13 +110,16 @@ export async function getGameSession(sessionId: string): Promise<{
   player_name:      string;
   status:           string;
   truth_string?:    string;
+  difficulty?:      string;
+  player_identity?: string;
+  current_act?:     number;
 } | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const db = createServerSupabase();
     const { data, error } = await db
       .from("game_sessions")
-      .select("id, killer_id, motive_direction, player_name, status, truth_string")
+      .select("id, killer_id, motive_direction, player_name, status, truth_string, difficulty, player_identity, current_act")
       .eq("id", sessionId)
       .single();
     if (error) return null;
@@ -237,6 +240,52 @@ export async function getCaseConfig(sessionId: string): Promise<CaseConfig | nul
     } satisfies CaseConfig;
   } catch {
     return null;
+  }
+}
+
+/**
+ * 取得 game session 的難度與身份設定（供 chat route 使用）。
+ */
+export async function getSessionMeta(sessionId: string): Promise<{
+  difficulty:      "easy" | "normal" | "hard";
+  playerIdentity:  "normal" | "phase2";
+  currentAct:      number;
+} | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const db = createServerSupabase();
+    const { data } = await db
+      .from("game_sessions")
+      .select("difficulty, player_identity, current_act")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      difficulty:     (data.difficulty     ?? "normal") as "easy" | "normal" | "hard",
+      playerIdentity: (data.player_identity ?? "normal") as "normal" | "phase2",
+      currentAct:     data.current_act ?? 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 取得玩家本局 critical 線索數量（用於幕次推進判斷）。
+ */
+export async function getCriticalClueCount(sessionId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const db = createServerSupabase();
+    // 從 npc_states 的 clues_revealed 彙總，再比對 clue priority
+    // 簡化版：取 player_clues 總數作為近似值
+    const { data } = await db
+      .from("player_clues")
+      .select("clue_id", { count: "exact" })
+      .eq("session_id", sessionId);
+    return data?.length ?? 0;
+  } catch {
+    return 0;
   }
 }
 

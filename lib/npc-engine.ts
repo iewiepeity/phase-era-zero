@@ -34,6 +34,8 @@ export interface BuildNpcPromptParams {
   availableClues?: Clue[];                    // 若不傳，使用 registry 的預設線索
   truthString?: string;                       // 後端用，不送前端
   playerIdentity?: "normal" | "phase2";       // 一般人 or 第二相體
+  /** 難度設定（影響 NPC 主動度與閃避行為）*/
+  difficulty?: "easy" | "normal" | "hard";
   /** 當前場景 ID（讓 NPC 知道自己在哪裡）*/
   currentSceneId?: string;
   /** 過去對話的簡要記憶（供 System Prompt 注入）*/
@@ -249,6 +251,7 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
     availableClues,
     truthString,
     playerIdentity,
+    difficulty,
     currentSceneId,
     conversationMemory,
     playerContext,
@@ -282,18 +285,23 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   const triggerSection = buildTriggerSection(npcId, playerContext);
   if (triggerSection) sections.push(triggerSection);
 
-  // 8. 篩選並注入線索
+  // 8. 難度行為指引
+  if (difficulty && difficulty !== "normal") {
+    sections.push(buildDifficultyBlock(difficulty));
+  }
+
+  // 9. 篩選並注入線索
   const clues    = availableClues ?? npc.clues;
   const filtered = filterAvailableClues(clues, npcState, playerStats, currentAct);
   sections.push(`\n${buildClueBlock(filtered)}`);
 
-  // 9. Route B 行為限制
+  // 10. Route B 行為限制
   if (playerRoute === "B") {
     const constraint = buildRouteBConstraint(playerStats);
     if (constraint) sections.push(constraint);
   }
 
-  // 10. 玩家身份提示（第二相體才注入）
+  // 11. 玩家身份提示（第二相體才注入）
   if (playerIdentity === "phase2") {
     sections.push(
       "\n【玩家特殊狀態】\n" +
@@ -306,6 +314,41 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   void truthString;
 
   return sections.join("\n");
+}
+
+// ── EV 觸發偵測（Route B 獸性侵蝕值增減）────────────────────
+
+const EV_EXPOSE_KWS   = ["我知道你是", "你就是兇手", "你殺了", "你在隱瞞", "你是兇手"];
+const EV_THREATEN_KWS = ["小心點", "後果自負", "別讓我", "你最好", "我警告你"];
+const EV_AGGRESS_KWS  = ["你怎麼能", "明明是你", "你不可能不知道", "你在說謊"];
+const EV_FRIENDLY_KWS = ["謝謝你", "辛苦了", "感謝", "你真好"];
+
+/**
+ * 依玩家訊息內容計算本次 EV 增減值。
+ * 攻擊 +5、暴露身份 +10、威脅 +8、友善 -2。
+ */
+export function detectEvTrigger(text: string): number {
+  if (EV_EXPOSE_KWS.some((kw) => text.includes(kw)))   return 10;
+  if (EV_THREATEN_KWS.some((kw) => text.includes(kw))) return 8;
+  if (EV_AGGRESS_KWS.some((kw) => text.includes(kw)))  return 5;
+  if (EV_FRIENDLY_KWS.some((kw) => text.includes(kw))) return -2;
+  return 0;
+}
+
+// ── 難度行為區塊 ──────────────────────────────────────────────
+
+function buildDifficultyBlock(difficulty: "easy" | "normal" | "hard"): string {
+  if (difficulty === "easy") {
+    return `\n【難度指引 — 簡單模式】
+玩家目前選擇較輕鬆的體驗。請你在適當時機主動給予更多提示，說話更直接，
+對玩家的問題更快給出實質回應，不要過度迂迴或閃避。`;
+  }
+  if (difficulty === "hard") {
+    return `\n【難度指引 — 困難模式】
+玩家選擇了挑戰性的體驗。你應該更謹慎、更善於閃避，對敏感話題繞圈子，
+不輕易透露資訊，讓玩家必須更努力追問才能獲得線索。`;
+  }
+  return "";  // normal 不加額外指引
 }
 
 // ── 判斷 NPC 回覆是否揭露了特定線索（簡易版）────────────────

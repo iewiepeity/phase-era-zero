@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getNpc } from "@/lib/npc-registry";
 import { getNpcGreeting } from "@/lib/content/narrative";
-import { NPC_TYPING_MS } from "@/lib/constants";
+import { NPC_TYPING_MS, STORAGE_KEYS } from "@/lib/constants";
 import type { UiMessage, NpcStateUI, ChatErrorKind } from "@/lib/types";
 
 type LoadState = "idle" | "loading" | "ready";
@@ -13,45 +13,65 @@ function genId(): string {
 }
 
 interface UseChatOptions {
-  sessionId:      string;
-  npcId:          string;
+  sessionId:       string;
+  npcId:           string;
   currentSceneId?: string;
 }
 
 interface UseChatReturn {
-  messages:         UiMessage[];
-  input:            string;
-  setInput:         (v: string) => void;
-  sending:          boolean;
-  loadState:        LoadState;
-  errorKind:        ChatErrorKind;
-  npcState:         NpcStateUI;
-  inputRef:         React.RefObject<HTMLInputElement | null>;
-  bottomRef:        React.RefObject<HTMLDivElement | null>;
-  sendMessage:      () => Promise<void>;
-  handleKeyDown:    (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  getDisplayContent:(msg: UiMessage) => string;
-  isTypingAnything: boolean;
+  messages:           UiMessage[];
+  input:              string;
+  setInput:           (v: string) => void;
+  sending:            boolean;
+  loadState:          LoadState;
+  errorKind:          ChatErrorKind;
+  npcState:           NpcStateUI;
+  inputRef:           React.RefObject<HTMLInputElement | null>;
+  bottomRef:          React.RefObject<HTMLDivElement | null>;
+  sendMessage:        () => Promise<void>;
+  handleKeyDown:      (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  getDisplayContent:  (msg: UiMessage) => string;
+  isTypingAnything:   boolean;
+  /** B1: 最近一次對話發現的線索（顯示提示用，顯示後可清除）*/
+  discoveredClue:     { id: string; text: string } | null;
+  clearDiscoveredClue:() => void;
 }
 
 /**
  * 對話頁面的完整狀態邏輯 hook。
  *
- * 負責：歷史載入、打字機動畫、送出訊息、信任度更新、錯誤處理、自動捲底。
+ * 負責：歷史載入、打字機動畫、送出訊息、信任度更新、錯誤處理、自動捲底、
+ *        EV 讀寫（localStorage）、成就解鎖通知、線索發現提示。
  */
 export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): UseChatReturn {
   const npc = getNpc(npcId);
 
-  const [messages,  setMessages]  = useState<UiMessage[]>([]);
-  const [input,     setInput]     = useState("");
-  const [sending,   setSending]   = useState(false);
-  const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [errorKind, setErrorKind] = useState<ChatErrorKind>(null);
-  const [npcState,  setNpcState]  = useState<NpcStateUI>({ trustLevel: 0, conversationCount: 0 });
+  const [messages,        setMessages]        = useState<UiMessage[]>([]);
+  const [input,           setInput]           = useState("");
+  const [sending,         setSending]         = useState(false);
+  const [loadState,       setLoadState]       = useState<LoadState>("idle");
+  const [errorKind,       setErrorKind]       = useState<ChatErrorKind>(null);
+  const [npcState,        setNpcState]        = useState<NpcStateUI>({ trustLevel: 0, conversationCount: 0 });
+  const [discoveredClue,  setDiscoveredClue]  = useState<{ id: string; text: string } | null>(null);
 
   const bottomRef  = useRef<HTMLDivElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
   const hasMounted = useRef(false);
+
+  // ── 輔助：讀取 localStorage 的 EV ──────────────────────────
+  function readEv(): number {
+    try {
+      return parseInt(localStorage.getItem(`pez_ev_${sessionId}`) ?? "0", 10) || 0;
+    } catch { return 0; }
+  }
+
+  // ── 輔助：讀取已解鎖成就 ──────────────────────────────────
+  function readUnlockedAchievements(): string[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "";
+      return raw.split(",").filter(Boolean);
+    } catch { return []; }
+  }
 
   // ── 建立 NPC 訊息物件 ──────────────────────────────────────
   function makeNpcMsg(content: string, withTyping = true): UiMessage {
@@ -167,13 +187,16 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
 
     const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 
-    // 從 localStorage 讀取已訪問場景
+    // 讀取 localStorage 狀態
     const visitedScenes = (() => {
       try {
         const raw = localStorage.getItem(`pez_visited_${sessionId}`) ?? "";
         return raw.split(",").filter(Boolean);
       } catch { return []; }
     })();
+
+    const currentEv                   = readEv();
+    const alreadyUnlockedAchievements = readUnlockedAchievements();
 
     try {
       const res  = await fetch("/api/chat", {
@@ -185,6 +208,8 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
           npcId,
           currentSceneId,
           visitedScenes,
+          currentEv,
+          alreadyUnlockedAchievements,
         }),
       });
       const data = await res.json();
@@ -205,12 +230,36 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
         return;
       }
 
+      // 更新 NPC 信任度
       if (typeof data.newTrustLevel === "number") {
         setNpcState((prev) => ({
           trustLevel:        data.newTrustLevel,
           conversationCount: prev.conversationCount + 1,
         }));
       }
+
+      // 更新 EV（A4）
+      if (typeof data.newEv === "number") {
+        try { localStorage.setItem(`pez_ev_${sessionId}`, String(data.newEv)); } catch { /* ignore */ }
+      }
+
+      // 解鎖新成就（A2）
+      if (Array.isArray(data.newAchievements) && data.newAchievements.length > 0) {
+        const current = readUnlockedAchievements();
+        const merged  = [...new Set([...current, ...data.newAchievements.map((a: { id: string }) => a.id)])];
+        try { localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), merged.join(",")); } catch { /* ignore */ }
+      }
+
+      // 幕次推進（A5）
+      if (data.actProgression?.advanced) {
+        try { localStorage.setItem(`pez_act_${sessionId}`, String(data.actProgression.newAct)); } catch { /* ignore */ }
+      }
+
+      // 設定線索發現提示（B1）
+      if (data.discoveredClue) {
+        setDiscoveredClue(data.discoveredClue);
+      }
+
       setMessages((prev) => [...prev, makeNpcMsg(data.reply, true)]);
     } catch {
       setErrorKind("network");
@@ -250,6 +299,8 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
     sendMessage,
     handleKeyDown,
     getDisplayContent,
-    isTypingAnything: messages.some((m) => m.isTyping),
+    isTypingAnything:    messages.some((m) => m.isTyping),
+    discoveredClue,
+    clearDiscoveredClue: () => setDiscoveredClue(null),
   };
 }

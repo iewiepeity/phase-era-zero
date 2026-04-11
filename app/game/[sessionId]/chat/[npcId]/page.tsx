@@ -35,6 +35,8 @@ export default function GameChatPage() {
     handleKeyDown,
     getDisplayContent,
     isTypingAnything,
+    discoveredClue,
+    clearDiscoveredClue,
   } = useChat({ sessionId, npcId });
 
   // Derive action options from trust level
@@ -49,6 +51,43 @@ export default function GameChatPage() {
 
   return (
     <div className="flex flex-col h-dvh max-w-2xl mx-auto bg-[#0d1117]">
+
+      {/* ── B1: 發現新線索 Toast ───────────────────────────── */}
+      {discoveredClue && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-xs w-full mx-4 animate-fade-in"
+          style={{ pointerEvents: "none" }}
+        >
+          <div
+            className="border rounded px-4 py-3 flex items-start gap-3 shadow-lg"
+            style={{
+              background:  "rgba(13,17,23,0.97)",
+              borderColor: `${npcColor.dot}50`,
+              boxShadow:   `0 0 20px ${npcColor.dot}20`,
+            }}
+          >
+            <span style={{ color: npcColor.dot }} className="text-base mt-0.5 shrink-0">🔍</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-mono-sys text-[10px] tracking-widest mb-1" style={{ color: npcColor.dot }}>
+                發現新線索
+              </p>
+              <p
+                className="text-xs text-[#e2c9a0]/70 leading-relaxed line-clamp-2"
+                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+              >
+                {discoveredClue.text}
+              </p>
+            </div>
+            <button
+              style={{ pointerEvents: "auto" }}
+              onClick={clearDiscoveredClue}
+              className="shrink-0 font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/60 mt-0.5"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 標題列 ───────────────────────────────────────── */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-[#e2c9a0]/6 shrink-0">

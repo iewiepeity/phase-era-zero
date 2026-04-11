@@ -3,7 +3,10 @@ import {
   getGameSession,
   completeGameSession,
   upsertPlayerProgress,
+  getCollectedClueIds,
+  getTalkedNpcs,
 } from "@/lib/services/db";
+import { checkAndUnlockAchievements } from "@/lib/services/achievements";
 import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
 // ── POST /api/game/accuse ─────────────────────────────────────
@@ -19,11 +22,18 @@ import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 // 勝利條件：兇手 + 動機方向 都正確（≥ 70 分）
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, accusedKillerId, accusedMotive, accusedSubMotive } = (await req.json()) as {
+    const {
+      sessionId,
+      accusedKillerId,
+      accusedMotive,
+      accusedSubMotive,
+      alreadyUnlockedAchievements = [],
+    } = (await req.json()) as {
       sessionId:        string;
       accusedKillerId:  KillerId;
       accusedMotive:    MotiveDirection;
       accusedSubMotive: SubMotiveId;
+      alreadyUnlockedAchievements?: string[];
     };
 
     if (!sessionId || !accusedKillerId || !accusedMotive || !accusedSubMotive) {
@@ -49,7 +59,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. 從 truth_string 解析子動機（格式：P{motive}{killerIdx}-{subMotive}-{mmdd}-...）
-    // truth_string 第 2 段（split('-')[1]）即為子動機代碼
     const truthParts       = (session.truth_string ?? "").split("-");
     const correctSubMotive = (truthParts[1] ?? null) as SubMotiveId | null;
 
@@ -57,7 +66,7 @@ export async function POST(req: NextRequest) {
     const killerCorrect    = session.killer_id === accusedKillerId;
     const motiveCorrect    = session.motive_direction === accusedMotive;
     const subMotiveCorrect = correctSubMotive !== null && accusedSubMotive === correctSubMotive;
-    const correct          = killerCorrect && motiveCorrect;   // 勝利條件：兇手 + 方向
+    const correct          = killerCorrect && motiveCorrect;
 
     const score = (killerCorrect ? 50 : 0)
                 + (motiveCorrect ? 20 : 0)
@@ -65,11 +74,33 @@ export async function POST(req: NextRequest) {
 
     const result = correct ? "win" : "lose";
 
-    // 4. 寫入結局（非同步）
+    // 4. 取得進度資訊（供成就判斷）
+    const [clueIds, talkedNpcs] = await Promise.all([
+      getCollectedClueIds(sessionId),
+      getTalkedNpcs(sessionId),
+    ]);
+
+    // 5. 成就解鎖檢查（A2）
+    const newAchievements = checkAndUnlockAchievements(
+      {
+        killerCorrect,
+        motiveCorrect,
+        subMotiveCorrect,
+        score,
+        accusedKillerId,
+        playerIdentity: (session.player_identity ?? "normal") as "normal" | "phase2",
+        difficulty:     session.difficulty ?? "normal",
+        clueCount:      clueIds.length,
+        talkedNpcCount: talkedNpcs.length,
+      },
+      alreadyUnlockedAchievements,
+    );
+
+    // 6. 寫入結局（非同步）
     completeGameSession(sessionId, result, score);
     upsertPlayerProgress(session.player_name, correct);
 
-    // 5. 回傳結果
+    // 7. 回傳結果
     return NextResponse.json({
       correct,
       killerCorrect,
@@ -82,6 +113,7 @@ export async function POST(req: NextRequest) {
         motiveDirection: session.motive_direction as MotiveDirection,
         subMotiveId:     correctSubMotive,
       },
+      newAchievements: newAchievements.map((a) => ({ id: a.id, name: a.name })),
     });
   } catch (err) {
     console.error("[POST /api/game/accuse]", err);

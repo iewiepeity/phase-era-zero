@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,21 +13,53 @@ import { MOTIVE_COLORS, STORAGE_KEYS } from "@/lib/constants";
 import { SuspectCard } from "@/components/game/SuspectCard";
 import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4;
 
 const SUSPECT_KEYS = Object.keys(SUSPECTS) as KillerId[];
+
+// ── 東野圭吾風格氛圍文字 ──────────────────────────────────────
+const ATMOSPHERE_LINES = [
+  "真相不是被發現的——它一直在那裡，等著你願意正視它。",
+  "你已經知道了。只是還不確定自己是否有勇氣說出口。",
+  "每一條線索都是一道裂縫。現在，你要把它撬開。",
+  "在賽德里斯，謊言和霧一樣——覆蓋一切，但遮不住血跡。",
+];
 
 export default function AccusePage() {
   const params    = useParams();
   const sessionId = params.sessionId as string;
   const router    = useRouter();
 
-  const [step,            setStep]            = useState<Step>(1);
+  const [step,            setStep]            = useState<Step>(0);
   const [chosenKiller,    setChosenKiller]    = useState<KillerId | null>(null);
   const [chosenMotive,    setChosenMotive]    = useState<MotiveDirection | null>(null);
   const [chosenSubMotive, setChosenSubMotive] = useState<SubMotiveId | null>(null);
   const [submitting,      setSubmitting]      = useState(false);
   const [submitError,     setSubmitError]     = useState("");
+
+  // B4: 線索摘要
+  const [collectedClues, setCollectedClues] = useState<string[]>([]);
+  const [atmosphereLine,  setAtmosphereLine]  = useState("");
+
+  useEffect(() => {
+    // 讀取已收集線索 ID（用於顯示數量）
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId));
+      void raw; // achievements not needed here
+    } catch { /* ignore */ }
+
+    // 隨機取一條氛圍文字
+    setAtmosphereLine(ATMOSPHERE_LINES[Math.floor(Math.random() * ATMOSPHERE_LINES.length)]);
+
+    // 讀取 localStorage 中有記錄的場景物件互動，間接估算已發現線索數
+    const clueKeys = Object.keys(localStorage).filter((k) => k.startsWith(`pez_interacted_${sessionId}_`));
+    const allInteracted: string[] = [];
+    clueKeys.forEach((k) => {
+      const ids = (localStorage.getItem(k) ?? "").split(",").filter(Boolean);
+      allInteracted.push(...ids);
+    });
+    setCollectedClues(allInteracted);
+  }, [sessionId]);
 
   const suspectList  = Object.values(SUSPECTS);
   const motiveList   = Object.values(MOTIVES);
@@ -38,6 +70,14 @@ export default function AccusePage() {
     setSubmitting(true);
     setSubmitError("");
     try {
+      // 讀取已解鎖成就，傳給 API
+      const alreadyUnlockedAchievements = (() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "";
+          return raw.split(",").filter(Boolean);
+        } catch { return []; }
+      })();
+
       const res = await fetch("/api/game/accuse", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,10 +86,19 @@ export default function AccusePage() {
           accusedKillerId:  chosenKiller,
           accusedMotive:    chosenMotive,
           accusedSubMotive: chosenSubMotive,
+          alreadyUnlockedAchievements,
         }),
       });
       const data = await res.json();
       if (!res.ok) { setSubmitError(data.message ?? "提交失敗，請稍後再試。"); return; }
+
+      // 解鎖新成就
+      if (Array.isArray(data.newAchievements) && data.newAchievements.length > 0) {
+        const current = (localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "").split(",").filter(Boolean);
+        const merged  = [...new Set([...current, ...data.newAchievements.map((a: { id: string }) => a.id)])];
+        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), merged.join(","));
+      }
+
       localStorage.setItem(STORAGE_KEYS.RESULT(sessionId), JSON.stringify(data));
       router.push(`/game/${sessionId}/result`);
     } catch {
@@ -78,7 +127,7 @@ export default function AccusePage() {
             提出指控
           </p>
           <p className="font-mono-sys text-[9px] text-[#5bb8ff]/30 tracking-widest mt-0.5">
-            STEP {step} / 4
+            {step === 0 ? "準備" : `STEP ${step} / 4`}
           </p>
         </div>
         <div className="w-16" />
@@ -86,18 +135,99 @@ export default function AccusePage() {
 
       {/* ── 步驟進度條 ──────────────────────────────────── */}
       <div className="flex gap-1.5 px-4 pt-3 pb-1">
-        {([1, 2, 3, 4] as Step[]).map((s) => (
+        {([1, 2, 3, 4] as const).map((s) => (
           <div
             key={s}
             className="flex-1 h-[2px] rounded-full transition-all duration-500"
             style={{
-              background: s <= step
+              background: step > 0 && s <= step
                 ? "linear-gradient(90deg, #ff3864, #ff8c55)"
                 : "rgba(226,201,160,0.08)",
             }}
           />
         ))}
       </div>
+
+      {/* ══ 步驟 0：指控前氛圍鋪墊（B4）══════════════════ */}
+      {step === 0 && (
+        <div className="flex-1 flex flex-col px-5 py-8 animate-fade-in">
+          <div className="flex-1 flex flex-col items-center justify-center gap-8">
+
+            {/* 氛圍文字 */}
+            <div className="w-full max-w-xs">
+              <p
+                className="font-mono-sys text-[9px] text-[#5bb8ff]/30 tracking-[0.4em] mb-4 text-center uppercase"
+              >
+                BEFORE ACCUSATION
+              </p>
+              <p
+                className="text-sm leading-loose text-[#e2c9a0]/65 text-center italic"
+                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+              >
+                {atmosphereLine}
+              </p>
+            </div>
+
+            <div className="h-px w-24 bg-[#e2c9a0]/08 self-center" />
+
+            {/* 已收集線索摘要 */}
+            <div
+              className="w-full max-w-xs p-5 rounded border"
+              style={{ borderColor: "rgba(226,201,160,0.08)", background: "rgba(17,24,32,0.80)" }}
+            >
+              <p className="font-mono-sys text-[9px] tracking-[0.35em] text-[#e2c9a0]/30 mb-4 uppercase">
+                Investigation Summary
+              </p>
+
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs text-[#e2c9a0]/40"
+                    style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                  >
+                    已互動場景物件
+                  </span>
+                  <span className="font-mono-sys text-[11px] text-[#5bb8ff]/60">
+                    {collectedClues.length}
+                  </span>
+                </div>
+                <div className="h-px bg-[#e2c9a0]/05" />
+                <p
+                  className="text-[11px] text-[#e2c9a0]/30 leading-relaxed"
+                  style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                >
+                  {collectedClues.length === 0
+                    ? "你幾乎還沒展開調查。現在指控，純粹是賭注。"
+                    : collectedClues.length < 5
+                    ? "你掌握了一些線索，但拼圖還不完整。"
+                    : collectedClues.length < 12
+                    ? "你已收集到相當的資訊。是時候做決定了。"
+                    : "你進行了深入的調查。你的判斷有憑有據。"}
+                </p>
+              </div>
+            </div>
+
+            <div className="h-px w-24 bg-[#e2c9a0]/08 self-center" />
+
+            {/* 行動按鈕 */}
+            <div className="w-full max-w-xs space-y-3">
+              <button
+                onClick={() => setStep(1)}
+                className="w-full py-3.5 border border-[#ff3864]/55 text-[#ff3864] text-sm tracking-[0.2em] hover:bg-[#ff3864]/10 hover:border-[#ff3864]/80 active:bg-[#ff3864]/20 transition-all duration-300 rounded glow-box-accent"
+                style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+              >
+                提出指控
+              </button>
+              <Link
+                href={`/game/${sessionId}`}
+                className="block w-full py-2.5 text-center font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/55 tracking-[0.3em] transition-colors"
+              >
+                再想想 →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ 步驟 1：選擇嫌疑人 ══════════════════════════ */}
       {step === 1 && (
@@ -316,7 +446,6 @@ export default function AccusePage() {
                 ACCUSATION SUMMARY
               </p>
 
-              {/* 兇手 */}
               <div className="text-center">
                 <p className="font-mono-sys text-[10px] text-[#e2c9a0]/25 mb-1 tracking-widest">兇手</p>
                 <p
@@ -332,7 +461,6 @@ export default function AccusePage() {
 
               <div className="h-px bg-gradient-to-r from-transparent via-[#e2c9a0]/10 to-transparent" />
 
-              {/* 動機方向 */}
               <div className="text-center">
                 <p className="font-mono-sys text-[10px] text-[#e2c9a0]/25 mb-2 tracking-widest">動機方向</p>
                 <div className="flex items-center justify-center gap-2">
@@ -357,7 +485,6 @@ export default function AccusePage() {
 
               <div className="h-px bg-gradient-to-r from-transparent via-[#e2c9a0]/10 to-transparent" />
 
-              {/* 子動機 */}
               <div className="text-center">
                 <p className="font-mono-sys text-[10px] text-[#e2c9a0]/25 mb-2 tracking-widest">具體動機</p>
                 <div className="flex items-center justify-center gap-2 mb-1">
@@ -387,7 +514,6 @@ export default function AccusePage() {
               </div>
             </div>
 
-            {/* 警告文字 */}
             <p
               className="text-xs text-[#e2c9a0]/28 leading-relaxed max-w-xs text-center animate-fade-in delay-300 opacity-0"
               style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
