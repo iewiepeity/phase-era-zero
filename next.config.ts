@@ -1,11 +1,7 @@
-import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    // worktree 環境：將 workspace root 設為上層專案目錄（node_modules 在那裡）
-    root: path.resolve(__dirname, "../../.."),
-  },
+  /* 預設配置即可，不需要額外的 turbopack root 設定 */
 };
 
 export default nextConfig;
