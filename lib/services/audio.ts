@@ -1,5 +1,6 @@
 /**
- * 音訊服務骨架 — BGM 管理（預留，目前無實際音訊檔）
+ * 音訊服務 — BGM 管理
+ * 主 BGM：/bgm/Zero.mp3
  * 所有方法在 Web Audio API 不可用時為 no-op
  */
 
@@ -22,14 +23,14 @@ export interface AudioTrack {
 }
 
 export const AUDIO_TRACKS: Record<AudioTrackId, AudioTrack> = {
-  main_theme:      { id: "main_theme",      label: "主題曲",          src: "/audio/main-theme.mp3",      loop: true,  mood: "mystery"  },
-  investigation:   { id: "investigation",   label: "調查時段",        src: "/audio/investigation.mp3",   loop: true,  mood: "calm"     },
-  tension:         { id: "tension",         label: "緊張時刻",        src: "/audio/tension.mp3",         loop: true,  mood: "tense"    },
-  night_scene:     { id: "night_scene",     label: "深夜場景",        src: "/audio/night-scene.mp3",     loop: true,  mood: "mystery"  },
-  port_ambience:   { id: "port_ambience",   label: "霧港氛圍",        src: "/audio/port-ambience.mp3",   loop: true,  mood: "ambient"  },
-  lab_hum:         { id: "lab_hum",         label: "實驗室低鳴",      src: "/audio/lab-hum.mp3",         loop: true,  mood: "tense"    },
-  precinct_noise:  { id: "precinct_noise",  label: "分局背景音",      src: "/audio/precinct-noise.mp3",  loop: true,  mood: "calm"     },
-  resolution:      { id: "resolution",      label: "結局",            src: "/audio/resolution.mp3",      loop: false, mood: "mystery"  },
+  main_theme:      { id: "main_theme",      label: "主題曲",          src: "/bgm/Zero.mp3",              loop: true,  mood: "mystery"  },
+  investigation:   { id: "investigation",   label: "調查時段",        src: "/bgm/Zero.mp3",              loop: true,  mood: "calm"     },
+  tension:         { id: "tension",         label: "緊張時刻",        src: "/bgm/Zero.mp3",              loop: true,  mood: "tense"    },
+  night_scene:     { id: "night_scene",     label: "深夜場景",        src: "/bgm/Zero.mp3",              loop: true,  mood: "mystery"  },
+  port_ambience:   { id: "port_ambience",   label: "霧港氛圍",        src: "/bgm/Zero.mp3",              loop: true,  mood: "ambient"  },
+  lab_hum:         { id: "lab_hum",         label: "實驗室低鳴",      src: "/bgm/Zero.mp3",              loop: true,  mood: "tense"    },
+  precinct_noise:  { id: "precinct_noise",  label: "分局背景音",      src: "/bgm/Zero.mp3",              loop: true,  mood: "calm"     },
+  resolution:      { id: "resolution",      label: "結局",            src: "/bgm/Zero.mp3",              loop: false, mood: "mystery"  },
 };
 
 class AudioService {
@@ -41,7 +42,8 @@ class AudioService {
   constructor() {
     if (typeof window !== "undefined") {
       try {
-        this.enabled = localStorage.getItem("pez_audio_enabled") === "true";
+        const stored = localStorage.getItem("pez_audio_enabled");
+      this.enabled = stored === null ? true : stored === "true";
         const vol    = parseFloat(localStorage.getItem("pez_audio_volume") ?? "0.4");
         this._volume = isNaN(vol) ? 0.4 : Math.max(0, Math.min(1, vol));
       } catch { /* ignore */ }

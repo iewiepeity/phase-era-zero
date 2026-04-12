@@ -43,6 +43,8 @@ export default function SettingsPage() {
   const [showActionHints,  setShowActionHints]  = useState(true);
   const [typewriterSpeed,  setTypewriterSpeed]  = useState<TypewriterValue>("normal");
   const [saved,            setSaved]            = useState(false);
+  const [bgmVolume,        setBgmVolume]        = useState(50);
+  const [manualSaved,      setManualSaved]      = useState(false);
 
   // 載入既有設定
   useEffect(() => {
@@ -54,6 +56,9 @@ export default function SettingsPage() {
       if (fs)  setFontSize(fs);
       if (sah !== null) setShowActionHints(sah !== "false");
       if (tws) setTypewriterSpeed(tws);
+
+      const bgm = localStorage.getItem("pez_audio_volume");
+      if (bgm) setBgmVolume(Math.round(parseFloat(bgm) * 100));
     } catch { /* ignore */ }
   }, [sessionId]);
 
@@ -69,6 +74,9 @@ export default function SettingsPage() {
       // 打字機速度套用到全域常數
       const ms = TYPEWRITER_OPTIONS.find((o) => o.value === typewriterSpeed)?.ms ?? 26;
       localStorage.setItem("pez_typewriter_ms", String(ms));
+
+      // BGM 音量
+      localStorage.setItem("pez_audio_volume", String(bgmVolume / 100));
     } catch { /* ignore */ }
 
     setSaved(true);
@@ -205,6 +213,61 @@ export default function SettingsPage() {
           </div>
           <p className="font-mono-sys text-[9px] text-[#e2c9a0]/20 mt-2 tracking-widest">
             {typewriterSpeed === "off" ? "文字即時顯示，無打字效果" : `${TYPEWRITER_OPTIONS.find((o) => o.value === typewriterSpeed)?.ms}ms / 字`}
+          </p>
+        </OptionRow>
+
+        {/* BGM 音量（預留）*/}
+        <OptionRow label="BGM 音量（預留）">
+          <div className="flex items-center gap-3">
+            <span className="font-mono-sys text-[9px] text-[#e2c9a0]/25 shrink-0">🔇</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={bgmVolume}
+              onChange={(e) => setBgmVolume(Number(e.target.value))}
+              className="flex-1 h-1 accent-[#5bb8ff] bg-[#e2c9a0]/10 rounded-full appearance-none cursor-pointer"
+            />
+            <span className="font-mono-sys text-[9px] text-[#e2c9a0]/25 shrink-0">🔊</span>
+            <span className="font-mono-sys text-[9px] text-[#e2c9a0]/35 w-8 text-right">{bgmVolume}%</span>
+          </div>
+          <p className="font-mono-sys text-[9px] text-[#e2c9a0]/15 mt-2 tracking-widest">
+            音效系統尚在準備中，調整將在音源加入後生效。
+          </p>
+        </OptionRow>
+
+        {/* 手動存檔 */}
+        <OptionRow label="手動存檔">
+          <button
+            onClick={() => {
+              try {
+                const snapshot = {
+                  sessionId,
+                  timestamp: Date.now(),
+                  keys: {} as Record<string, string>,
+                };
+                for (let i = 0; i < localStorage.length; i++) {
+                  const k = localStorage.key(i);
+                  if (k && k.startsWith("pez_")) {
+                    snapshot.keys[k] = localStorage.getItem(k) ?? "";
+                  }
+                }
+                localStorage.setItem(`pez_save_${sessionId}`, JSON.stringify(snapshot));
+                setManualSaved(true);
+                setTimeout(() => setManualSaved(false), 2000);
+              } catch { /* ignore */ }
+            }}
+            className="w-full py-2.5 rounded border font-mono-sys text-xs tracking-widest transition-all duration-200"
+            style={{
+              borderColor: manualSaved ? "rgba(74,222,128,0.40)" : "rgba(226,201,160,0.15)",
+              color:       manualSaved ? "rgba(74,222,128,0.70)" : "rgba(226,201,160,0.45)",
+              background:  manualSaved ? "rgba(74,222,128,0.05)" : "transparent",
+            }}
+          >
+            {manualSaved ? "已存檔 ✓" : "存檔目前進度"}
+          </button>
+          <p className="font-mono-sys text-[9px] text-[#e2c9a0]/15 mt-2 tracking-widest">
+            將目前的遊戲進度存儲到瀏覽器。
           </p>
         </OptionRow>
 

@@ -412,8 +412,14 @@ export default function ResultPage() {
                 重新開局
               </Link>
               <Link
-                href={`/game/${sessionId}`}
+                href={`/game/${sessionId}/stats`}
                 className="w-full py-2.5 border border-[#e2c9a0]/10 text-[#e2c9a0]/35 text-sm tracking-[0.2em] hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/60 transition-all duration-300 rounded text-center"
+              >
+                調查統計
+              </Link>
+              <Link
+                href={`/game/${sessionId}`}
+                className="w-full py-2.5 border border-[#e2c9a0]/10 text-[#e2c9a0]/25 text-sm tracking-[0.2em] hover:border-[#e2c9a0]/18 hover:text-[#e2c9a0]/50 transition-all duration-300 rounded text-center"
               >
                 回到地圖
               </Link>

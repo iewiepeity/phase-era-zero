@@ -13,6 +13,9 @@ import { FontSizeControl } from "@/components/ui/FontSizeControl";
 import { getActionPoints, getMaxActionPoints, consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
 import { getNpc } from "@/lib/npc-registry";
 import { getNpcEvents, markEventRead, generateNpcEvent, type NpcEvent } from "@/lib/services/npc-events";
+import { getCurrentPeriod, getPeriodName, PERIOD_RANGE, type TimePeriod } from "@/lib/services/time-system";
+import { checkForEvent, getActiveEvents, dismissEvent } from "@/lib/services/event-system";
+import type { GameEvent } from "@/lib/content/game-events";
 
 export default function GameHubPage() {
   const params    = useParams();
@@ -38,6 +41,10 @@ export default function GameHubPage() {
   // NPC 主動事件
   const [npcEvents,         setNpcEvents]         = useState<NpcEvent[]>([]);
   const [showNpcPanel,      setShowNpcPanel]      = useState(false);
+  // 時間系統
+  const [timePeriod,        setTimePeriod]        = useState<TimePeriod>(0);
+  // 隨機事件
+  const [activeGameEvents,  setActiveGameEvents]  = useState<GameEvent[]>([]);
 
   useEffect(() => {
     const storedIdentity   = localStorage.getItem(STORAGE_KEYS.IDENTITY(sessionId));
@@ -73,6 +80,13 @@ export default function GameHubPage() {
     // NPC 事件：30% 機率生成一個新事件
     if (Math.random() < 0.3) generateNpcEvent(sessionId);
     setNpcEvents(getNpcEvents(sessionId));
+
+    // 時間系統
+    setTimePeriod(getCurrentPeriod(sessionId));
+
+    // 隨機事件：進入 Hub 時檢查
+    checkForEvent(sessionId, "ap_milestone");
+    setActiveGameEvents(getActiveEvents(sessionId));
 
     setShowHub(true);
   }, [sessionId]);
@@ -152,7 +166,7 @@ export default function GameHubPage() {
             賽德里斯　中城區
           </p>
           <p className="font-mono-sys text-[9px] text-[#5bb8ff]/30 tracking-widest mt-0.5">
-            P.E. 02 &nbsp;·&nbsp; 第 {currentAct} 幕
+            P.E. 02 &nbsp;·&nbsp; 第 {currentAct} 幕 &nbsp;·&nbsp; {getPeriodName(timePeriod)}
           </p>
         </div>
 
@@ -304,6 +318,32 @@ export default function GameHubPage() {
           <span className="font-mono-sys text-[9px] text-[#5bb8ff]/40 tracking-widest shrink-0">查看 →</span>
         </button>
       )}
+
+      {/* 隨機事件通知 */}
+      {activeGameEvents.length > 0 && activeGameEvents.map((evt) => (
+        <div
+          key={evt.id}
+          className="mx-4 mt-3 px-4 py-3 rounded border border-[#f59e0b]/25 bg-[#f59e0b]/04 animate-fade-in"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-mono-sys text-[10px] text-[#f59e0b]/65 tracking-[0.3em] uppercase">
+              {evt.type === "positive" ? "好消息" : evt.type === "negative" ? "注意" : "事件"}
+            </p>
+            <button
+              onClick={() => { dismissEvent(sessionId, evt.id); setActiveGameEvents((prev) => prev.filter((e) => e.id !== evt.id)); }}
+              className="font-mono-sys text-[9px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/50 tracking-widest"
+            >
+              收起 ×
+            </button>
+          </div>
+          <p
+            className="text-xs text-[#e2c9a0]/55 leading-relaxed"
+            style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+          >
+            {evt.title}——{evt.description}
+          </p>
+        </div>
+      ))}
 
       {/* 場景說明 */}
       <div className="px-4 pt-5 pb-3">
