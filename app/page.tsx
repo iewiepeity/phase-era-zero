@@ -105,6 +105,12 @@ export default function Home() {
             進入賽德里斯
           </Link>
           <Link
+            href="/tutorial"
+            className="block w-full py-3 px-8 rounded border border-[#5bb8ff]/12 text-[#5bb8ff]/35 text-sm tracking-widest hover:border-[#5bb8ff]/25 hover:text-[#5bb8ff]/60 transition-all duration-300"
+          >
+            新手教學
+          </Link>
+          <Link
             href="/chat"
             className="block w-full py-3 px-8 rounded border border-[#e2c9a0]/10 text-[#e2c9a0]/30 text-sm tracking-widest hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/55 transition-all duration-300"
           >
