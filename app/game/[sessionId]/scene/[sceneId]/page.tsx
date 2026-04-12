@@ -13,6 +13,7 @@ import { ActionPanel } from "@/components/game/ActionPanel";
 import { TutorialOverlay } from "@/components/game/TutorialOverlay";
 import { getRandomNpcsForScene } from "@/lib/services/random-npc";
 import type { RandomNpcTemplate } from "@/lib/content/random-npcs";
+import { getOverheardConversations, type OverheardConversation } from "@/lib/content/npc-conversations";
 
 // ── Typewriter hook ────────────────────────────────────────────
 
@@ -83,6 +84,8 @@ export default function ScenePage() {
   const [introShown,      setIntroShown]      = useState(false);
   const [skipIntro,       setSkipIntro]       = useState(false);
   const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
+  const [showOverheard,   setShowOverheard]   = useState(false);
+  const overheardConvos = getOverheardConversations(sceneId);
 
   // Atmosphere intro text
   const atmosphereText = SCENE_ATMOSPHERE[sceneId] ?? "";
@@ -290,6 +293,14 @@ export default function ScenePage() {
           <p className="font-mono-sys text-[9px] text-[#5bb8ff]/25 tracking-widest">
             SCENE
           </p>
+          {overheardConvos.length > 0 && (
+            <button
+              onClick={() => setShowOverheard(true)}
+              className="font-mono-sys text-[9px] px-2.5 py-1 rounded border border-[#e2c9a0]/12 text-[#e2c9a0]/30 hover:border-[#e2c9a0]/25 hover:text-[#e2c9a0]/55 transition-colors tracking-widest"
+            >
+              觀察
+            </button>
+          )}
         </div>
 
         {/* Scene title */}
@@ -591,6 +602,61 @@ export default function ScenePage() {
                 {getActionLabel(activeItem)}
               </button>
             )}
+          </div>
+        </>
+      )}
+
+      {/* 偷聽對話 Bottom Sheet */}
+      {showOverheard && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowOverheard(false)}
+          />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 max-w-xl mx-auto rounded-t-2xl px-5 pt-5 pb-8 max-h-[70vh] flex flex-col"
+            style={{ background: "#111827", borderTop: `1px solid ${palette.accent}20` }}
+          >
+            <div className="w-10 h-1 rounded-full bg-[#e2c9a0]/15 mx-auto mb-4 shrink-0" />
+            <div className="flex items-center justify-between shrink-0 mb-4">
+              <p className="font-mono-sys text-[10px] text-[#e2c9a0]/40 tracking-[0.3em] uppercase">
+                觀察 — 旁聽
+              </p>
+              <button
+                onClick={() => setShowOverheard(false)}
+                className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/55"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+              {overheardConvos.map((convo: OverheardConversation) => (
+                <div key={convo.id} className="space-y-2">
+                  <p
+                    className="font-mono-sys text-[9px] tracking-[0.3em] mb-2"
+                    style={{ color: `${palette.accent}70` }}
+                  >
+                    {convo.topic}
+                  </p>
+                  {convo.snippet.map((line, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span
+                        className="font-mono-sys text-[9px] shrink-0 mt-0.5 w-16 truncate"
+                        style={{ color: "rgba(226,201,160,0.35)" }}
+                      >
+                        {line.speaker}
+                      </span>
+                      <p
+                        className="text-xs text-[#e2c9a0]/60 leading-relaxed flex-1"
+                        style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                      >
+                        {line.line}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}

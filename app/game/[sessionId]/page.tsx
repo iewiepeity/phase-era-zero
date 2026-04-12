@@ -12,6 +12,7 @@ import type { Scene } from "@/lib/scene-config";
 import { FontSizeControl } from "@/components/ui/FontSizeControl";
 import { getActionPoints, getMaxActionPoints, consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
 import { getNpc } from "@/lib/npc-registry";
+import { getNpcEvents, markEventRead, generateNpcEvent, type NpcEvent } from "@/lib/services/npc-events";
 
 export default function GameHubPage() {
   const params    = useParams();
@@ -34,6 +35,9 @@ export default function GameHubPage() {
   type ChatPreview = { sceneId: string; messages: { npcName: string; content: string; role: string }[] };
   const [chatPreview,       setChatPreview]       = useState<ChatPreview | null>(null);
   const [previewLoading,    setPreviewLoading]    = useState(false);
+  // NPC 主動事件
+  const [npcEvents,         setNpcEvents]         = useState<NpcEvent[]>([]);
+  const [showNpcPanel,      setShowNpcPanel]      = useState(false);
 
   useEffect(() => {
     const storedIdentity   = localStorage.getItem(STORAGE_KEYS.IDENTITY(sessionId));
@@ -65,6 +69,10 @@ export default function GameHubPage() {
       progress[scene.id] = ids.length;
     }
     setSceneProgress(progress);
+
+    // NPC 事件：30% 機率生成一個新事件
+    if (Math.random() < 0.3) generateNpcEvent(sessionId);
+    setNpcEvents(getNpcEvents(sessionId));
 
     setShowHub(true);
   }, [sessionId]);
@@ -280,6 +288,23 @@ export default function GameHubPage() {
         </div>
       )}
 
+      {/* NPC 主動事件通知列 */}
+      {npcEvents.some((e) => !e.read) && (
+        <button
+          onClick={() => setShowNpcPanel(true)}
+          className="mx-4 mt-3 px-4 py-2.5 rounded border border-[#5bb8ff]/25 bg-[#5bb8ff]/04 flex items-center gap-3 w-auto hover:bg-[#5bb8ff]/08 transition-colors animate-fade-in"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#5bb8ff] animate-pulse shrink-0" />
+          <p
+            className="text-xs text-[#5bb8ff]/65 flex-1 text-left"
+            style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+          >
+            有人找你——{npcEvents.filter((e) => !e.read).length} 條未讀訊息
+          </p>
+          <span className="font-mono-sys text-[9px] text-[#5bb8ff]/40 tracking-widest shrink-0">查看 →</span>
+        </button>
+      )}
+
       {/* 場景說明 */}
       <div className="px-4 pt-5 pb-3">
         <div className="flex items-center gap-2 mb-2">
@@ -380,6 +405,10 @@ export default function GameHubPage() {
           <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">⚙️</span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">設定</span>
         </Link>
+        <Link href={`/game/${sessionId}/stats`}     className="flex flex-col items-center gap-0.5 group shrink-0">
+          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">📊</span>
+          <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">統計</span>
+        </Link>
       </div>
 
       {/* C2: 行動點耗盡 Modal */}
@@ -417,6 +446,76 @@ export default function GameHubPage() {
               >
                 沉默離開
               </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* NPC 主動事件面板 */}
+      {showNpcPanel && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setShowNpcPanel(false)} />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[51] max-w-xl mx-auto rounded-t-2xl px-5 pt-5 pb-8 max-h-[70vh] flex flex-col"
+            style={{ background: "#111827", borderTop: "1px solid rgba(91,184,255,0.20)" }}
+          >
+            <div className="w-10 h-1 rounded-full bg-[#e2c9a0]/15 mx-auto mb-4 shrink-0" />
+            <div className="flex items-center justify-between shrink-0 mb-4">
+              <p className="font-mono-sys text-[10px] text-[#5bb8ff]/55 tracking-[0.3em] uppercase">NPC 訊息</p>
+              <button
+                onClick={() => setShowNpcPanel(false)}
+                className="font-mono-sys text-[10px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/55 tracking-widest"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {npcEvents.length === 0 && (
+                <p
+                  className="text-sm text-[#e2c9a0]/25 text-center py-6"
+                  style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                >
+                  還沒有訊息。
+                </p>
+              )}
+              {npcEvents.map((evt, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 px-4 py-3 rounded border transition-colors"
+                  style={{
+                    borderColor: evt.read ? "rgba(226,201,160,0.08)" : "rgba(91,184,255,0.22)",
+                    background:  evt.read ? "rgba(226,201,160,0.01)" : "rgba(91,184,255,0.04)",
+                  }}
+                >
+                  {!evt.read && <span className="w-1.5 h-1.5 rounded-full bg-[#5bb8ff] mt-1.5 shrink-0" />}
+                  {evt.read && <span className="w-1.5 h-1.5 mt-1.5 shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono-sys text-[9px] text-[#5bb8ff]/55">{evt.npcName}</span>
+                      <span className="font-mono-sys text-[8px] text-[#e2c9a0]/18 ml-auto">
+                        {new Date(evt.timestamp).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p
+                      className="text-xs text-[#e2c9a0]/60 leading-relaxed"
+                      style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
+                    >
+                      {evt.message}
+                    </p>
+                  </div>
+                  {!evt.read && (
+                    <button
+                      onClick={() => {
+                        markEventRead(sessionId, idx);
+                        setNpcEvents(getNpcEvents(sessionId));
+                      }}
+                      className="font-mono-sys text-[8px] text-[#e2c9a0]/20 hover:text-[#e2c9a0]/50 tracking-widest shrink-0 mt-0.5"
+                    >
+                      已讀
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </>
