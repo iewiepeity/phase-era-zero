@@ -14,8 +14,7 @@ import { getActionPoints, getMaxActionPoints, consumeActionPoints, syncActionPoi
 import { getNpc } from "@/lib/npc-registry";
 import { getNpcEvents, markEventRead, generateNpcEvent, type NpcEvent } from "@/lib/services/npc-events";
 import { getCurrentPeriod, getPeriodName, PERIOD_RANGE, type TimePeriod } from "@/lib/services/time-system";
-import { checkForEvent, getActiveEvents, dismissEvent } from "@/lib/services/event-system";
-import type { GameEvent } from "@/lib/content/game-events";
+import { checkAndTriggerEvents, getGameNotifications, markNotificationRead, type GameNotification, type EventCheckContext } from "@/lib/services/event-system";
 
 export default function GameHubPage() {
   const params    = useParams();
@@ -44,7 +43,7 @@ export default function GameHubPage() {
   // 時間系統
   const [timePeriod,        setTimePeriod]        = useState<TimePeriod>(0);
   // 隨機事件
-  const [activeGameEvents,  setActiveGameEvents]  = useState<GameEvent[]>([]);
+  const [activeGameEvents,  setActiveGameEvents]  = useState<GameNotification[]>([]);
 
   useEffect(() => {
     const storedIdentity   = localStorage.getItem(STORAGE_KEYS.IDENTITY(sessionId));
@@ -85,8 +84,10 @@ export default function GameHubPage() {
     setTimePeriod(getCurrentPeriod(sessionId));
 
     // 隨機事件：進入 Hub 時檢查
-    checkForEvent(sessionId, "ap_milestone");
-    setActiveGameEvents(getActiveEvents(sessionId));
+    const visitedRaw = localStorage.getItem(STORAGE_KEYS.VISITED_SCENES(sessionId));
+    const visitedScenes = visitedRaw ? JSON.parse(visitedRaw) as string[] : [];
+    checkAndTriggerEvents({ sessionId, currentAct, identity, visitedScenes });
+    setActiveGameEvents(getGameNotifications(sessionId).filter(n => !n.read));
 
     setShowHub(true);
   }, [sessionId]);
@@ -327,10 +328,10 @@ export default function GameHubPage() {
         >
           <div className="flex items-center justify-between mb-1">
             <p className="font-mono-sys text-[10px] text-[#f59e0b]/65 tracking-[0.3em] uppercase">
-              {evt.type === "positive" ? "好消息" : evt.type === "negative" ? "注意" : "事件"}
+              {evt.type === "pressure" ? "注意" : "事件"}
             </p>
             <button
-              onClick={() => { dismissEvent(sessionId, evt.id); setActiveGameEvents((prev) => prev.filter((e) => e.id !== evt.id)); }}
+              onClick={() => { markNotificationRead(sessionId, evt.id); setActiveGameEvents((prev) => prev.filter((e) => e.id !== evt.id)); }}
               className="font-mono-sys text-[9px] text-[#e2c9a0]/25 hover:text-[#e2c9a0]/50 tracking-widest"
             >
               收起 ×
@@ -340,7 +341,7 @@ export default function GameHubPage() {
             className="text-xs text-[#e2c9a0]/55 leading-relaxed"
             style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
           >
-            {evt.title}——{evt.description}
+            {evt.title}——{evt.message}
           </p>
         </div>
       ))}
