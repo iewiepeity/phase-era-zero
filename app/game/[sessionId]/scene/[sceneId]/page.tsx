@@ -15,7 +15,7 @@ import { getRandomNpcsForScene } from "@/lib/services/random-npc";
 import type { RandomNpcTemplate } from "@/lib/content/random-npcs";
 import { getSceneConversations, type NpcConversation } from "@/lib/content/npc-conversations";
 import { getCurrentTimePeriod, getNpcAvailability, getTimePeriod } from "@/lib/services/time-system";
-import { findItemCombination, type ItemItemCombinationResult } from "@/lib/content/item-combinations";
+import { findItemCombination, type ItemCombinationRecipe } from "@/lib/content/item-combinations";
 // event-system handled at Hub level
 
 // ── Typewriter hook ────────────────────────────────────────────
@@ -93,7 +93,7 @@ export default function ScenePage() {
   const currentPeriod = getCurrentTimePeriod(sessionId);
   // 道具使用
   const [showItemUse,     setShowItemUse]     = useState(false);
-  const [comboResult,     setComboResult]     = useState<ItemCombinationResult | null>(null);
+  const [comboResult,     setComboResult]     = useState<ItemCombinationRecipe | null>(null);
 
   // Atmosphere intro text
   const atmosphereText = SCENE_ATMOSPHERE[sceneId] ?? "";
