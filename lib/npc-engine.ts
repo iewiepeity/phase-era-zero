@@ -46,6 +46,12 @@ export interface BuildNpcPromptParams {
   killerId?: string;
   /** 本局動機方向（讓 NPC 知道事件背景）*/
   motiveDirection?: string;
+  /** 玩家選擇的顯示名稱（讓 NPC 稱呼玩家）*/
+  playerName?: string;
+  /** 本次對話前的態度記錄注入文字（由 attitude-tracker 產生）*/
+  attitudeNotes?: string;
+  /** 不可逆後果區塊（由 consequence-system 產生，覆蓋部分 NPC 行為）*/
+  consequenceBlock?: string;
 }
 
 // ── 預設 PlayerStats（訪客/Phase 2 暫用）──────────────────────
@@ -270,6 +276,9 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
     playerContext,
     killerId,
     motiveDirection,
+    playerName,
+    attitudeNotes,
+    consequenceBlock,
   } = params;
 
   // 1. 載入 NPC 定義
@@ -281,6 +290,11 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
 
   // 2.5 通用前提：玩家是頭號嫌疑人
   sections.push(SUSPECT_PREMISE_BLOCK);
+
+  // 2.6 玩家顯示名稱（若玩家有設定）
+  if (playerName) {
+    sections.push(`\n【玩家稱呼】\n你面前這個人告訴你他叫「${playerName}」。在對話中你可以直接稱呼這個名字，也可以不用，視你們的關係和你的性格而定。`);
+  }
 
   // 3. NPC 關係知識（讓 NPC 知道他認識的人）
   const relContext = buildRelationshipContext(npcId);
@@ -307,6 +321,12 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   if (difficulty && difficulty !== "normal") {
     sections.push(buildDifficultyBlock(difficulty));
   }
+
+  // 8.5 態度記錄（由 attitude-tracker 產生，若有才注入）
+  if (attitudeNotes) sections.push(attitudeNotes);
+
+  // 8.6 不可逆後果（由 consequence-system 產生，若有才注入）
+  if (consequenceBlock) sections.push(consequenceBlock);
 
   // 9. 篩選並注入線索
   const clues    = availableClues ?? npc.clues;

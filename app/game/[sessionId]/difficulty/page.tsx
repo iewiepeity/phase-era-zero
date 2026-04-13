@@ -44,8 +44,8 @@ export default function DifficultyPage() {
       // silently continue
     }
 
-    // 3. 進入遊戲主畫面
-    router.push(`/game/${sessionId}`);
+    // 3. 取名後進入遊戲主畫面
+    router.push(`/game/${sessionId}/name`);
   }
 
   const chosenDef = DIFFICULTIES.find((d) => d.id === selected)!;

@@ -96,6 +96,9 @@ export async function POST(req: NextRequest) {
       visitedScenes  = [],
       currentEv    = 0,
       alreadyUnlockedAchievements = [],
+      playerName,
+      attitudeNotes,
+      consequenceBlock,
     } = (await req.json()) as {
       messages:       ChatMessage[];
       sessionId?:     string;
@@ -107,6 +110,9 @@ export async function POST(req: NextRequest) {
       visitedScenes?: string[];
       currentEv?:     number;
       alreadyUnlockedAchievements?: string[];
+      playerName?:       string;
+      attitudeNotes?:    string;
+      consequenceBlock?: string;
     };
 
     if (!npcId) {
@@ -212,6 +218,9 @@ export async function POST(req: NextRequest) {
       playerIdentity:      playerIdentity as "normal" | "phase2",
       killerId:            caseConfig?.killerId,
       motiveDirection:     caseConfig?.motiveDirection,
+      playerName,
+      attitudeNotes:       attitudeNotes     || undefined,
+      consequenceBlock:    consequenceBlock  || undefined,
     });
 
     // 8. 呼叫 Gemini

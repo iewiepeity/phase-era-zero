@@ -46,6 +46,12 @@ export const STORAGE_KEYS = {
   TUTORIAL_SCENE: "pez_tutorial_scene",
   /** 是否已看過對話新手教學 */
   TUTORIAL_CHAT: "pez_tutorial_chat",
+  /** 玩家自訂顯示名稱 */
+  PLAYER_NAME: (sessionId: string) => `pez_name_${sessionId}`,
+  /** NPC 互動態度記錄（per NPC）*/
+  NPC_ATTITUDE: (sessionId: string, npcId: string) => `pez_attitude_${sessionId}_${npcId}`,
+  /** 不可逆選擇後果記錄（per session）*/
+  CONSEQUENCES: (sessionId: string) => `pez_consequences_${sessionId}`,
 } as const;
 
 // ── NPC 色彩配置 ───────────────────────────────────────────────
