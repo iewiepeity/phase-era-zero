@@ -7,10 +7,10 @@ import { STORAGE_KEYS } from "@/lib/constants";
 /**
  * /game/[sessionId]/name
  *
- * 玩家取名頁面，插入於難度選擇 → 遊戲主畫面之間。
+ * 開場流程：intro → name → identity → difficulty → 地圖
  * 完成後：
  *   1. 寫入 localStorage（STORAGE_KEYS.PLAYER_NAME）
- *   2. 導向 /game/[sessionId]
+ *   2. 導向 /game/[sessionId]/identity
  */
 export default function NamePage() {
   const params    = useParams();
@@ -29,7 +29,7 @@ export default function NamePage() {
     try {
       localStorage.setItem(STORAGE_KEYS.PLAYER_NAME(sessionId), trimmed);
     } catch { /* ignore */ }
-    router.push(`/game/${sessionId}`);
+    router.push(`/game/${sessionId}/identity`);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -132,7 +132,7 @@ export default function NamePage() {
           <button
             onClick={() => {
               try { localStorage.setItem(STORAGE_KEYS.PLAYER_NAME(sessionId), ""); } catch { /* ignore */ }
-              router.push(`/game/${sessionId}`);
+              router.push(`/game/${sessionId}/identity`);
             }}
             className="w-full py-2.5 text-[11px] tracking-widest transition-colors duration-200"
             style={{

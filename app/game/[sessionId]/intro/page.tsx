@@ -35,14 +35,14 @@ export default function IntroPage() {
       return;
     }
     if (isLastPara) {
-      router.push(`/game/${sessionId}/identity`);
+      router.push(`/game/${sessionId}/name`);
     } else {
       setParaIndex((i) => i + 1);
     }
   }, [isDone, isLastPara, sessionId, skip, router]);
 
   const handleSkipAll = useCallback(() => {
-    router.push(`/game/${sessionId}/identity`);
+    router.push(`/game/${sessionId}/name`);
   }, [sessionId, router]);
 
   return (
@@ -112,7 +112,7 @@ export default function IntroPage() {
               onClick={handleContinue}
               className="px-8 py-3 border border-[#5bb8ff]/35 text-[#5bb8ff]/80 text-sm tracking-[0.25em] hover:bg-[#5bb8ff]/08 hover:border-[#5bb8ff]/60 hover:text-[#5bb8ff] transition-all duration-300 rounded animate-fade-in"
             >
-              {isLastPara ? "選擇身份" : "繼續"}
+              {isLastPara ? "輸入名字" : "繼續"}
             </button>
           )}
         </div>

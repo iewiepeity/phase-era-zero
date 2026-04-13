@@ -233,6 +233,22 @@ export async function getSessionMeta(sessionId: string): Promise<{
   }
 }
 
+export async function updateDisplayName(
+  sessionId:   string,
+  displayName: string,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const db = createServerSupabase();
+    await db
+      .from("game_sessions")
+      .update({ display_name: displayName })
+      .eq("id", sessionId);
+  } catch (e) {
+    console.warn("[db-game] updateDisplayName:", e);
+  }
+}
+
 export async function upsertPlayerProgress(
   playerName: string,
   correct:    boolean,

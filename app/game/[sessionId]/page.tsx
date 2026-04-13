@@ -450,6 +450,10 @@ export default function GameHubPage() {
           <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">📊</span>
           <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">統計</span>
         </Link>
+        <Link href={`/game/${sessionId}/phone`}    className="flex flex-col items-center gap-0.5 group shrink-0">
+          <span className="text-base opacity-40 group-hover:opacity-70 transition-opacity">📱</span>
+          <span className="font-mono-sys text-[8px] tracking-widest text-[#e2c9a0]/25 group-hover:text-[#e2c9a0]/55 transition-colors">手機</span>
+        </Link>
       </div>
 
       {/* C2: 行動點耗盡 Modal */}
