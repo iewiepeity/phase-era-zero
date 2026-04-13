@@ -244,6 +244,15 @@ function buildTriggerSection(npcId: string, ctx?: PlayerContext): string {
   return "\n" + triggered.slice(0, 2).join("\n\n");
 }
 
+// ── 通用嫌疑人前提區塊（注入所有 NPC）────────────────────────
+/**
+ * 所有 NPC 共享的前提認知：玩家是本案頭號嫌疑人。
+ * 此前提不覆蓋各 NPC 的個別態度，只提供基礎事實背景。
+ */
+const SUSPECT_PREMISE_BLOCK = `
+【案件背景前提】
+你知道跟你說話的這個人是賽德里斯 14 人連環失蹤案的頭號嫌疑人。通話記錄顯示他的號碼出現在所有 14 個失蹤者最後的通話記錄中，逮捕令已在準備中。這是你對這個人的基本認知。你具體如何回應這個事實，由你的性格、你與此人的關係、以及你對這件事的了解程度決定——但你知道這件事。`;
+
 // ── 主函式：buildNpcPrompt()──────────────────────────────────
 export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   const {
@@ -269,6 +278,9 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
 
   // 2. 基礎人設
   const sections: string[] = [npc.basePrompt];
+
+  // 2.5 通用前提：玩家是頭號嫌疑人
+  sections.push(SUSPECT_PREMISE_BLOCK);
 
   // 3. NPC 關係知識（讓 NPC 知道他認識的人）
   const relContext = buildRelationshipContext(npcId);

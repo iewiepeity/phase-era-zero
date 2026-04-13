@@ -119,6 +119,17 @@ const HANZHUO_CLUE_TEMPLATES: ClueTemplate[] = [
     requiredAct: 3,
     notBefore: ["hz_scene"],
   },
+
+  // 通用：通話記錄有技術異常——暗示偽造（韓卓注意到程序問題）
+  {
+    id: "hz_call_record_anomaly",
+    contentFn: () =>
+      "那份通話記錄……我看過文件格式。這是我多管閒事，不在我職責範圍內，但我認識的一個人做過電信業，他說過正規的通話記錄有幾個固定欄位，包括中繼站 ID 和封包確認碼。那份起訴書裡的摘要版本——那些欄位不在，只有時間和號碼。那個格式不是標準格式。我說的不是這些，我說的是，如果有人要偽造一份通話記錄，那種格式是最容易偽造的。",
+    priority: "major",
+    minAffinity: 65,
+    requiredAct: 3,
+    notBefore: ["hz_nda"],
+  },
 ];
 
 // ── 公開函式 ─────────────────────────────────────────────────────

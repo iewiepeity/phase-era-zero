@@ -99,6 +99,17 @@ const IT_CLUE_TEMPLATES: ClueTemplate[] = [
     requiredAct: 4,
   },
 
+  // 通話紀錄偽造：誰有能力修改通訊系統（通用）
+  {
+    id: "it_telecom_tampering",
+    contentFn: () =>
+      "那份通話紀錄。你要知道，在這個城市裡修改電信系統的通話記錄——不是偽造截圖，是在系統層面把記錄改掉——有能力做這件事的人很少。我是其中一個，但我沒有做，我找東西不需要用那種方法。另外有能力做的人，一個在 BTMA 的基礎設施組，一個有途徑接觸電信委員會的系統層。如果那份紀錄是假的，往那裡找。",
+    priority: "critical",
+    minAffinity: 60,
+    requiredAct: 2,
+    notBefore: ["it_search"],
+  },
+
   // 動機 D（扭曲崇拜）：那個符號
   {
     id: "it_ritual_D",
