@@ -110,12 +110,6 @@ export default function Home() {
           >
             新手教學
           </Link>
-          <Link
-            href="/chat"
-            className="block w-full py-3 px-8 rounded border border-[#e2c9a0]/10 text-[#e2c9a0]/30 text-sm tracking-widest hover:border-[#e2c9a0]/22 hover:text-[#e2c9a0]/55 transition-all duration-300"
-          >
-            陳姐麵館（Demo）
-          </Link>
         </div>
 
         {/* 底部 meta */}

@@ -10,6 +10,7 @@ import {
   getSubMotivesForDirection,
 } from "@/lib/case-config";
 import { MOTIVE_COLORS, STORAGE_KEYS } from "@/lib/constants";
+import { recordConsequence } from "@/lib/services/consequence-system";
 import { SuspectCard } from "@/components/game/SuspectCard";
 import type { KillerId, MotiveDirection, SubMotiveId } from "@/lib/case-config";
 
@@ -97,6 +98,14 @@ export default function AccusePage() {
         const current = (localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "").split(",").filter(Boolean);
         const merged  = [...new Set([...current, ...data.newAchievements.map((a: { id: string }) => a.id)])];
         localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), merged.join(","));
+      }
+
+      // 若指控錯誤，記錄不可逆後果（該 NPC 拒絕後續對話）
+      if (data.correct === false && chosenKiller) {
+        const currentAct = (() => {
+          try { return parseInt(localStorage.getItem(`pez_act_${sessionId}`) ?? "1", 10) || 1; } catch { return 1; }
+        })();
+        recordConsequence(sessionId, "wrong_accuse_npc", chosenKiller, currentAct);
       }
 
       localStorage.setItem(STORAGE_KEYS.RESULT(sessionId), JSON.stringify(data));

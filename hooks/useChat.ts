@@ -6,6 +6,8 @@ import { getNpcGreeting } from "@/lib/content/narrative";
 import { isRandomNpc, getRandomNpcGreeting } from "@/lib/services/random-npc";
 import { NPC_TYPING_MS, STORAGE_KEYS } from "@/lib/constants";
 import { consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
+import { updateAttitude, getAttitudeNotes } from "@/lib/services/attitude-tracker";
+import { getConsequencePromptBlock, getRefusalMessage } from "@/lib/services/consequence-system";
 import type { UiMessage, NpcStateUI, ChatErrorKind } from "@/lib/types";
 
 type LoadState = "idle" | "loading" | "ready";
@@ -65,6 +67,21 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
     try {
       return parseInt(localStorage.getItem(`pez_ev_${sessionId}`) ?? "0", 10) || 0;
     } catch { return 0; }
+  }
+
+  // ── 輔助：讀取玩家名稱 ────────────────────────────────────
+  function readPlayerName(): string | undefined {
+    try {
+      const n = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME(sessionId));
+      return n || undefined;
+    } catch { return undefined; }
+  }
+
+  // ── 輔助：讀取當前幕次 ────────────────────────────────────
+  function readCurrentAct(): number {
+    try {
+      return parseInt(localStorage.getItem(`pez_act_${sessionId}`) ?? "1", 10) || 1;
+    } catch { return 1; }
   }
 
   // ── 輔助：讀取已解鎖成就 ──────────────────────────────────
@@ -211,6 +228,20 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
 
     const currentEv                   = readEv();
     const alreadyUnlockedAchievements = readUnlockedAchievements();
+    const playerName                  = readPlayerName();
+    const currentAct                  = readCurrentAct();
+    // 先讀取上一次的態度記錄（送出前注入），再於成功後更新
+    const attitudeNotes               = getAttitudeNotes(sessionId, npcId);
+    // 不可逆後果（若有則注入，覆蓋部分 NPC 行為）
+    const consequenceBlock            = getConsequencePromptBlock(sessionId, npcId);
+    // 若 NPC 已拒絕對話，顯示拒絕訊息，不發送請求
+    const refusal                     = getRefusalMessage(sessionId, npcId);
+    if (refusal) {
+      setMessages((prev) => [...prev, makeNpcMsg(refusal, false)]);
+      setSending(false);
+      setInput("");
+      return;
+    }
 
     try {
       const res  = await fetch("/api/chat", {
@@ -224,6 +255,9 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
           visitedScenes,
           currentEv,
           alreadyUnlockedAchievements,
+          playerName,
+          attitudeNotes:     attitudeNotes     || undefined,
+          consequenceBlock:  consequenceBlock  || undefined,
         }),
       });
       const data = await res.json();
@@ -275,6 +309,9 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
       }
 
       setMessages((prev) => [...prev, makeNpcMsg(data.reply, true)]);
+
+      // 更新此 NPC 的態度記錄（非阻塞）
+      updateAttitude(sessionId, npcId, text, currentAct);
     } catch {
       setErrorKind("network");
       setMessages((prev) => [
