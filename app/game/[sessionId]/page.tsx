@@ -12,8 +12,8 @@ import type { Scene } from "@/lib/scene-config";
 import { FontSizeControl } from "@/components/ui/FontSizeControl";
 import { getActionPoints, getMaxActionPoints, consumeActionPoints, syncActionPointsToDB } from "@/lib/services/action-points";
 import { getNpc } from "@/lib/npc-registry";
-import { getNpcEvents, markEventRead, generateNpcEvent, type NpcEvent } from "@/lib/services/npc-events";
-import { getCurrentPeriod, getPeriodName, PERIOD_RANGE, type TimePeriod } from "@/lib/services/time-system";
+import { getNpcEvents, markNpcEventRead, triggerRandomNpcEvent, type NpcEvent } from "@/lib/services/npc-events";
+import { getCurrentTimePeriod, getTimePeriod, type TimePeriod } from "@/lib/services/time-system";
 import { checkAndTriggerEvents, getGameNotifications, markNotificationRead, type GameNotification, type EventCheckContext } from "@/lib/services/event-system";
 
 export default function GameHubPage() {
@@ -77,11 +77,11 @@ export default function GameHubPage() {
     setSceneProgress(progress);
 
     // NPC 事件：30% 機率生成一個新事件
-    if (Math.random() < 0.3) generateNpcEvent(sessionId);
+    if (Math.random() < 0.3) triggerRandomNpcEvent(sessionId);
     setNpcEvents(getNpcEvents(sessionId));
 
     // 時間系統
-    setTimePeriod(getCurrentPeriod(sessionId));
+    setTimePeriod(getCurrentTimePeriod(sessionId));
 
     // 隨機事件：進入 Hub 時檢查
     const visitedRaw = localStorage.getItem(STORAGE_KEYS.VISITED_SCENES(sessionId));
@@ -167,7 +167,7 @@ export default function GameHubPage() {
             賽德里斯　中城區
           </p>
           <p className="font-mono-sys text-[9px] text-[#5bb8ff]/30 tracking-widest mt-0.5">
-            P.E. 02 &nbsp;·&nbsp; 第 {currentAct} 幕 &nbsp;·&nbsp; {getPeriodName(timePeriod)}
+            P.E. 02 &nbsp;·&nbsp; 第 {currentAct} 幕 &nbsp;·&nbsp; {getTimePeriod(timePeriod).label}
           </p>
         </div>
 
@@ -547,7 +547,7 @@ export default function GameHubPage() {
                   {!evt.read && (
                     <button
                       onClick={() => {
-                        markEventRead(sessionId, idx);
+                        markNpcEventRead(sessionId, idx);
                         setNpcEvents(getNpcEvents(sessionId));
                       }}
                       className="font-mono-sys text-[8px] text-[#e2c9a0]/20 hover:text-[#e2c9a0]/50 tracking-widest shrink-0 mt-0.5"

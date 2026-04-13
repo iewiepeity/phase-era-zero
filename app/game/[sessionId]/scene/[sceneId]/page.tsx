@@ -13,10 +13,10 @@ import { ActionPanel } from "@/components/game/ActionPanel";
 import { TutorialOverlay } from "@/components/game/TutorialOverlay";
 import { getRandomNpcsForScene } from "@/lib/services/random-npc";
 import type { RandomNpcTemplate } from "@/lib/content/random-npcs";
-import { getOverheardConversations, type OverheardConversation } from "@/lib/content/npc-conversations";
-import { getCurrentPeriod, isNpcAvailable, getPeriodName } from "@/lib/services/time-system";
-import { tryItemCombination, type CombinationResult } from "@/lib/content/item-combinations";
-import { checkForEvent } from "@/lib/services/event-system";
+import { getSceneConversations, type NpcConversation } from "@/lib/content/npc-conversations";
+import { getCurrentTimePeriod, getNpcAvailability, getTimePeriod } from "@/lib/services/time-system";
+import { findItemCombination, type ItemItemCombinationResult } from "@/lib/content/item-combinations";
+// event-system handled at Hub level
 
 // ── Typewriter hook ────────────────────────────────────────────
 
@@ -88,12 +88,12 @@ export default function ScenePage() {
   const [skipIntro,       setSkipIntro]       = useState(false);
   const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
   const [showOverheard,   setShowOverheard]   = useState(false);
-  const overheardConvos = getOverheardConversations(sceneId);
+  const overheardConvos = getSceneConversations(sceneId);
   // 時段 NPC 可用性
-  const currentPeriod = getCurrentPeriod(sessionId);
+  const currentPeriod = getCurrentTimePeriod(sessionId);
   // 道具使用
   const [showItemUse,     setShowItemUse]     = useState(false);
-  const [comboResult,     setComboResult]     = useState<CombinationResult | null>(null);
+  const [comboResult,     setComboResult]     = useState<ItemCombinationResult | null>(null);
 
   // Atmosphere intro text
   const atmosphereText = SCENE_ATMOSPHERE[sceneId] ?? "";
@@ -132,7 +132,7 @@ export default function ScenePage() {
       .catch(() => {});
 
     // 進入場景時觸發隨機事件檢查
-    checkForEvent(sessionId, "scene_entry");
+    // Event check on scene entry handled by Hub page
   }, [sessionId, sceneId]);
 
   // Auto-advance intro after it finishes
@@ -469,9 +469,9 @@ export default function ScenePage() {
                            item.triggersClue   ? "線索" : "環境"}
                         </span>
                         {/* NPC 時段限制 */}
-                        {item.type === "npc" && item.npcId && !isNpcAvailable(item.npcId, currentPeriod) && (
+                        {item.type === "npc" && item.npcId && !getNpcAvailability(sessionId, item.npcId) < 0.5 && (
                           <span className="font-mono-sys text-[7px] px-1.5 py-0.5 rounded-sm border shrink-0 tracking-wide border-[#ff3864]/25 text-[#ff3864]/60 bg-[#ff3864]/05">
-                            {getPeriodName(currentPeriod)}不在
+                            {getTimePeriod(currentPeriod).label}不在
                           </span>
                         )}
                       </button>
@@ -623,7 +623,7 @@ export default function ScenePage() {
                 {activeItem.type !== "npc" && (
                   <button
                     onClick={() => {
-                      const result = tryItemCombination(activeItem.id, "");
+                      const result = findItemCombination(activeItem.id, "");
                       if (result) setComboResult(result);
                       else setShowItemUse(true);
                     }}
@@ -662,7 +662,7 @@ export default function ScenePage() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-5 pr-1">
-              {overheardConvos.map((convo: OverheardConversation) => (
+              {overheardConvos.map((convo: NpcConversation) => (
                 <div key={convo.id} className="space-y-2">
                   <p
                     className="font-mono-sys text-[9px] tracking-[0.3em] mb-2"

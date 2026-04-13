@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { tryItemCombination, type CombinationResult } from "@/lib/content/item-combinations";
+import { findItemCombination, type ItemItemCombinationResult } from "@/lib/content/item-combinations";
 
 interface InventoryItem {
   id:            string;
@@ -25,7 +25,7 @@ export default function InventoryPage() {
   // 組合模式
   const [combineMode,  setCombineMode]  = useState(false);
   const [firstItem,    setFirstItem]    = useState<InventoryItem | null>(null);
-  const [combineResult, setCombineResult] = useState<CombinationResult | null>(null);
+  const [combineResult, setCombineResult] = useState<ItemCombinationResult | null>(null);
   const [noMatch,      setNoMatch]      = useState(false);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function InventoryPage() {
 
   function handleCombineSecond(second: InventoryItem) {
     if (!firstItem) return;
-    const result = tryItemCombination(firstItem.item_id, second.item_id);
+    const result = findItemCombination(firstItem.item_id, second.item_id);
     if (result) {
       setCombineResult(result);
     } else {
