@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { findItemCombination, type ItemItemCombinationResult } from "@/lib/content/item-combinations";
+import { findItemCombination, type ItemCombinationResult } from "@/lib/content/item-combinations";
 
 interface InventoryItem {
   id:            string;
