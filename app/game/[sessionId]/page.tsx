@@ -41,7 +41,7 @@ export default function GameHubPage() {
   const [npcEvents,         setNpcEvents]         = useState<NpcEvent[]>([]);
   const [showNpcPanel,      setShowNpcPanel]      = useState(false);
   // 時間系統
-  const [timePeriod,        setTimePeriod]        = useState<TimePeriod>(0);
+  const [timePeriod,        setTimePeriod]        = useState<TimePeriod>("dawn");
   // 隨機事件
   const [activeGameEvents,  setActiveGameEvents]  = useState<GameNotification[]>([]);
 
@@ -77,7 +77,7 @@ export default function GameHubPage() {
     setSceneProgress(progress);
 
     // NPC 事件：30% 機率生成一個新事件
-    if (Math.random() < 0.3) triggerRandomNpcEvent(sessionId);
+    if (Math.random() < 0.3) triggerRandomNpcEvent(sessionId, "chen_jie", "陳姐");
     setNpcEvents(getNpcEvents(sessionId));
 
     // 時間系統
@@ -534,7 +534,7 @@ export default function GameHubPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-mono-sys text-[9px] text-[#5bb8ff]/55">{evt.npcName}</span>
                       <span className="font-mono-sys text-[8px] text-[#e2c9a0]/18 ml-auto">
-                        {new Date(evt.timestamp).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(evt.createdAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                     <p
@@ -547,7 +547,7 @@ export default function GameHubPage() {
                   {!evt.read && (
                     <button
                       onClick={() => {
-                        markNpcEventRead(sessionId, idx);
+                        markNpcEventRead(sessionId, evt.id);
                         setNpcEvents(getNpcEvents(sessionId));
                       }}
                       className="font-mono-sys text-[8px] text-[#e2c9a0]/20 hover:text-[#e2c9a0]/50 tracking-widest shrink-0 mt-0.5"

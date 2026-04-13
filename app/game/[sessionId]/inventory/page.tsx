@@ -282,13 +282,13 @@ export default function InventoryPage() {
               className="text-base tracking-widest text-[#e2c9a0]/85 mb-3"
               style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
             >
-              {combineResult.title}
+              {combineResult.result.clue_text}
             </h2>
             <p
               className="text-sm text-[#e2c9a0]/60 leading-loose mb-6"
               style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
             >
-              {combineResult.description}
+              {combineResult.result.description}
             </p>
             <button
               onClick={dismissResult}

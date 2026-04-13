@@ -88,7 +88,9 @@ export default function ScenePage() {
   const [skipIntro,       setSkipIntro]       = useState(false);
   const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
   const [showOverheard,   setShowOverheard]   = useState(false);
-  const overheardConvos = getSceneConversations(sceneId);
+  const identity = (typeof window !== "undefined" ? localStorage.getItem(`pez_identity_${sessionId}`) : "normal") as "normal" | "phase2" ?? "normal";
+  const currentAct = parseInt(typeof window !== "undefined" ? localStorage.getItem(`pez_act_${sessionId}`) ?? "1" : "1", 10);
+  const overheardConvos = getSceneConversations(sceneId, currentAct, identity, [], []);
   // 時段 NPC 可用性
   const currentPeriod = getCurrentTimePeriod(sessionId);
   // 道具使用
@@ -469,7 +471,7 @@ export default function ScenePage() {
                            item.triggersClue   ? "線索" : "環境"}
                         </span>
                         {/* NPC 時段限制 */}
-                        {item.type === "npc" && item.npcId && !getNpcAvailability(sessionId, item.npcId) < 0.5 && (
+                        {item.type === "npc" && item.npcId && getNpcAvailability(sessionId, item.npcId) < 0.5 && (
                           <span className="font-mono-sys text-[7px] px-1.5 py-0.5 rounded-sm border shrink-0 tracking-wide border-[#ff3864]/25 text-[#ff3864]/60 bg-[#ff3864]/05">
                             {getTimePeriod(currentPeriod).label}不在
                           </span>
@@ -668,21 +670,21 @@ export default function ScenePage() {
                     className="font-mono-sys text-[9px] tracking-[0.3em] mb-2"
                     style={{ color: `${palette.accent}70` }}
                   >
-                    {convo.topic}
+                    {convo.title}
                   </p>
-                  {convo.snippet.map((line, i) => (
+                  {convo.lines.map((line: { name: string; text: string }, i: number) => (
                     <div key={i} className="flex items-start gap-2">
                       <span
                         className="font-mono-sys text-[9px] shrink-0 mt-0.5 w-16 truncate"
                         style={{ color: "rgba(226,201,160,0.35)" }}
                       >
-                        {line.speaker}
+                        {line.name}
                       </span>
                       <p
                         className="text-xs text-[#e2c9a0]/60 leading-relaxed flex-1"
                         style={{ fontFamily: "var(--font-noto-serif-tc), serif" }}
                       >
-                        {line.line}
+                        {line.text}
                       </p>
                     </div>
                   ))}
