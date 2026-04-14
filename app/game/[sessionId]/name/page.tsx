@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { STORAGE_KEYS } from "@/lib/constants";
 
@@ -20,6 +20,12 @@ export default function NamePage() {
   const [name,    setName]    = useState("");
   const [saving,  setSaving]  = useState(false);
   const [focused, setFocused] = useState(false);
+
+  // 如果已經取過名字，跳過這頁
+  useEffect(() => {
+    const done = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME(sessionId));
+    if (done) router.replace(`/game/${sessionId}`);
+  }, [sessionId, router]);
 
   const trimmed = name.trim();
 

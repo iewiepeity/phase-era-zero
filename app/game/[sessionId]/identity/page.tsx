@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { STORAGE_KEYS } from "@/lib/constants";
 
@@ -72,6 +72,12 @@ export default function IdentityPage() {
   const [selected,  setSelected]  = useState<PlayerIdentity | null>(null);
   const [saving,    setSaving]    = useState(false);
   const [hovered,   setHovered]   = useState<PlayerIdentity | null>(null);
+
+  // 如果已經選過身份，跳過這頁
+  useEffect(() => {
+    const done = localStorage.getItem(STORAGE_KEYS.IDENTITY(sessionId));
+    if (done) router.replace(`/game/${sessionId}/difficulty`);
+  }, [sessionId, router]);
 
   async function handleConfirm() {
     if (!selected || saving) return;

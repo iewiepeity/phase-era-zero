@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, type DifficultyId } from "@/lib/content/difficulty";
 import { STORAGE_KEYS } from "@/lib/constants";
@@ -23,6 +23,12 @@ export default function DifficultyPage() {
   const [selected, setSelected] = useState<DifficultyId>(DEFAULT_DIFFICULTY);
   const [saving,   setSaving]   = useState(false);
   const [hovered,  setHovered]  = useState<DifficultyId | null>(null);
+
+  // 如果已經選過難度，跳過這頁
+  useEffect(() => {
+    const done = localStorage.getItem(STORAGE_KEYS.DIFFICULTY(sessionId));
+    if (done) router.replace(`/game/${sessionId}/name`);
+  }, [sessionId, router]);
 
   async function handleConfirm() {
     if (saving) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PROLOGUE_PARAGRAPHS, PROLOGUE_TOTAL } from "@/lib/content/prologue";
 import { useTypewriter } from "@/hooks/useTypewriter";
@@ -17,6 +17,12 @@ export default function IntroPage() {
   const params    = useParams();
   const sessionId = params.sessionId as string;
   const router    = useRouter();
+
+  // 如果已看過開場白，跳過
+  useEffect(() => {
+    const done = localStorage.getItem(`pez_seen_intro_${sessionId}`);
+    if (done) router.replace(`/game/${sessionId}/identity`);
+  }, [sessionId, router]);
 
   const [paraIndex, setParaIndex] = useState(0);
   const currentText = PROLOGUE_PARAGRAPHS[paraIndex] ?? "";
@@ -35,14 +41,16 @@ export default function IntroPage() {
       return;
     }
     if (isLastPara) {
-      router.push(`/game/${sessionId}/name`);
+      try { localStorage.setItem(`pez_seen_intro_${sessionId}`, "1"); } catch {}
+      router.push(`/game/${sessionId}/identity`);
     } else {
       setParaIndex((i) => i + 1);
     }
   }, [isDone, isLastPara, sessionId, skip, router]);
 
   const handleSkipAll = useCallback(() => {
-    router.push(`/game/${sessionId}/name`);
+    try { localStorage.setItem(`pez_seen_intro_${sessionId}`, "1"); } catch {}
+    router.push(`/game/${sessionId}/identity`);
   }, [sessionId, router]);
 
   return (
@@ -112,7 +120,7 @@ export default function IntroPage() {
               onClick={handleContinue}
               className="px-8 py-3 border border-[#5bb8ff]/35 text-[#5bb8ff]/80 text-sm tracking-[0.25em] hover:bg-[#5bb8ff]/08 hover:border-[#5bb8ff]/60 hover:text-[#5bb8ff] transition-all duration-300 rounded animate-fade-in"
             >
-              {isLastPara ? "輸入名字" : "繼續"}
+              {isLastPara ? "開始調查" : "繼續"}
             </button>
           )}
         </div>
