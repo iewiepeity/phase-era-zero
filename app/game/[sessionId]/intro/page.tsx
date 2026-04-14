@@ -21,7 +21,7 @@ export default function IntroPage() {
   // 如果已看過開場白，跳過
   useEffect(() => {
     const done = localStorage.getItem(`pez_seen_intro_${sessionId}`);
-    if (done) router.replace(`/game/${sessionId}/identity`);
+    if (done) router.replace(`/game/${sessionId}/name`);
   }, [sessionId, router]);
 
   const [paraIndex, setParaIndex] = useState(0);
@@ -42,7 +42,7 @@ export default function IntroPage() {
     }
     if (isLastPara) {
       try { localStorage.setItem(`pez_seen_intro_${sessionId}`, "1"); } catch {}
-      router.push(`/game/${sessionId}/identity`);
+      router.push(`/game/${sessionId}/name`);
     } else {
       setParaIndex((i) => i + 1);
     }
@@ -50,7 +50,7 @@ export default function IntroPage() {
 
   const handleSkipAll = useCallback(() => {
     try { localStorage.setItem(`pez_seen_intro_${sessionId}`, "1"); } catch {}
-    router.push(`/game/${sessionId}/identity`);
+    router.push(`/game/${sessionId}/name`);
   }, [sessionId, router]);
 
   return (

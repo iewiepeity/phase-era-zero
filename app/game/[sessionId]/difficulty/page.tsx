@@ -27,7 +27,7 @@ export default function DifficultyPage() {
   // 如果已經選過難度，跳過這頁
   useEffect(() => {
     const done = localStorage.getItem(STORAGE_KEYS.DIFFICULTY(sessionId));
-    if (done) router.replace(`/game/${sessionId}/name`);
+    if (done) router.replace(`/game/${sessionId}`);
   }, [sessionId, router]);
 
   async function handleConfirm() {
@@ -51,7 +51,7 @@ export default function DifficultyPage() {
     }
 
     // 3. 取名後進入遊戲主畫面
-    router.push(`/game/${sessionId}/name`);
+    router.push(`/game/${sessionId}`);
   }
 
   const chosenDef = DIFFICULTIES.find((d) => d.id === selected)!;

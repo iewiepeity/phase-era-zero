@@ -24,7 +24,7 @@ export default function NamePage() {
   // 如果已經取過名字，跳過這頁
   useEffect(() => {
     const done = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME(sessionId));
-    if (done) router.replace(`/game/${sessionId}`);
+    if (done) router.replace(`/game/${sessionId}/identity`);
   }, [sessionId, router]);
 
   const trimmed = name.trim();
