@@ -84,10 +84,28 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
     } catch { return 1; }
   }
 
+  // ── 輔助：讀取本局難度（保留 nightmare 區別，DB 會降為 hard）──
+  function readDifficulty(): "easy" | "normal" | "hard" | "nightmare" | undefined {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.DIFFICULTY(sessionId));
+      if (raw === "easy" || raw === "normal" || raw === "hard" || raw === "nightmare") return raw;
+      return undefined;
+    } catch { return undefined; }
+  }
+
+  // ── 輔助：讀取本局玩家身份 ───────────────────────────────
+  function readIdentity(): "normal" | "phase2" | undefined {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.IDENTITY(sessionId));
+      if (raw === "normal" || raw === "phase2") return raw;
+      return undefined;
+    } catch { return undefined; }
+  }
+
   // ── 輔助：讀取已解鎖成就 ──────────────────────────────────
   function readUnlockedAchievements(): string[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "";
+      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) ?? "";
       return raw.split(",").filter(Boolean);
     } catch { return []; }
   }
@@ -230,6 +248,9 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
     const alreadyUnlockedAchievements = readUnlockedAchievements();
     const playerName                  = readPlayerName();
     const currentAct                  = readCurrentAct();
+    const difficulty                  = readDifficulty();
+    const identity                    = readIdentity();
+    const playerRoute                 = identity === "phase2" ? "B" : "A";
     // 先讀取上一次的態度記錄（送出前注入），再於成功後更新
     const attitudeNotes               = getAttitudeNotes(sessionId, npcId);
     // 不可逆後果（若有則注入，覆蓋部分 NPC 行為）
@@ -251,11 +272,15 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
           messages:       allMessages,
           sessionId,
           npcId,
+          currentAct,
+          playerRoute,
           currentSceneId,
           visitedScenes,
           currentEv,
           alreadyUnlockedAchievements,
           playerName,
+          difficulty,
+          playerIdentity:    identity,
           attitudeNotes:     attitudeNotes     || undefined,
           consequenceBlock:  consequenceBlock  || undefined,
         }),
@@ -295,7 +320,7 @@ export function useChat({ sessionId, npcId, currentSceneId }: UseChatOptions): U
       if (Array.isArray(data.newAchievements) && data.newAchievements.length > 0) {
         const current = readUnlockedAchievements();
         const merged  = [...new Set([...current, ...data.newAchievements.map((a: { id: string }) => a.id)])];
-        try { localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), merged.join(",")); } catch { /* ignore */ }
+        try { localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, merged.join(",")); } catch { /* ignore */ }
       }
 
       // 幕次推進（A5）

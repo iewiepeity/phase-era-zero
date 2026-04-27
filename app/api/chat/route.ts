@@ -91,12 +91,14 @@ export async function POST(req: NextRequest) {
       guestId,
       npcId,
       currentAct   = 1,
-      playerRoute  = "A",
+      playerRoute,
       currentSceneId,
       visitedScenes  = [],
       currentEv    = 0,
       alreadyUnlockedAchievements = [],
       playerName,
+      difficulty:       difficultyOverride,
+      playerIdentity:   playerIdentityOverride,
       attitudeNotes,
       consequenceBlock,
     } = (await req.json()) as {
@@ -111,6 +113,8 @@ export async function POST(req: NextRequest) {
       currentEv?:     number;
       alreadyUnlockedAchievements?: string[];
       playerName?:       string;
+      difficulty?:       "easy" | "normal" | "hard" | "nightmare";
+      playerIdentity?:   "normal" | "phase2";
       attitudeNotes?:    string;
       consequenceBlock?: string;
     };
@@ -174,9 +178,13 @@ export async function POST(req: NextRequest) {
       resolvedSessionId ? getSessionMeta(resolvedSessionId)      : Promise.resolve(null),
     ]);
 
-    // 取得難度與身份
-    const difficulty     = sessionMeta?.difficulty     ?? "normal";
-    const playerIdentity = sessionMeta?.playerIdentity ?? "normal";
+    // 取得難度與身份（優先用 request 帶的值，因為 DB 把 nightmare 降為 hard，
+    // 前端的 localStorage 才保有完整原始值）
+    const difficulty     = difficultyOverride     ?? sessionMeta?.difficulty     ?? "normal";
+    const playerIdentity = playerIdentityOverride ?? sessionMeta?.playerIdentity ?? "normal";
+    // 由身份推導 playerRoute；request 直接帶的優先
+    const resolvedPlayerRoute: "A" | "B" =
+      playerRoute ?? (playerIdentity === "phase2" ? "B" : "A");
 
     // 4. 取得所有 NPC 信任度（用於 trustLevel 觸發）
     const npcTrustLevels: Record<string, number> = { [npcId]: npcState.selfAffinity };
@@ -207,7 +215,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = buildNpcPrompt({
       npcId,
       currentAct,
-      playerRoute,
+      playerRoute:         resolvedPlayerRoute,
       playerStats:         evPlayerStats,
       npcState,
       availableClues:      dynamicClues,
@@ -234,9 +242,10 @@ export async function POST(req: NextRequest) {
     const available      = filterAvailableClues(npc.clues, npcState, evPlayerStats, currentAct);
     const revealedClueId = detectRevealedClue(reply, available);
 
-    // 10. EV 更新（Route B 才累積）
-    const evDelta  = playerRoute === "B" ? detectEvTrigger(lastMessage.content) : 0;
-    const newEv    = Math.min(100, Math.max(0, currentEv + evDelta));
+    // 10. EV 更新（Route B 才累積；極難難度加倍）
+    const baseEvDelta = resolvedPlayerRoute === "B" ? detectEvTrigger(lastMessage.content) : 0;
+    const evDelta     = difficulty === "nightmare" ? baseEvDelta * 2 : baseEvDelta;
+    const newEv       = Math.min(100, Math.max(0, currentEv + evDelta));
 
     // 11. 自動把揭露線索寫入 player_clues（B1）
     let discoveredClue: { id: string; text: string } | null = null;
@@ -273,10 +282,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 13. 成就解鎖檢查（A2）
+    //   talkedNpcs 是 DB 已儲存的紀錄，本次對話的 NPC 還沒寫入，因此手動補上
+    const talkedNpcSet = new Set([...talkedNpcs, npcId]);
     const newAchievements = checkAndUnlockAchievements(
       {
         clueCount:       clueIds.length + (discoveredClue ? 1 : 0),
-        talkedNpcCount:  talkedNpcs.length,
+        talkedNpcCount:  talkedNpcSet.size,
         visitedSceneIds: visitedScenes,
         npcTrustMap:     {
           ...npcTrustLevels,

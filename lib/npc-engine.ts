@@ -35,7 +35,7 @@ export interface BuildNpcPromptParams {
   truthString?: string;                       // 後端用，不送前端
   playerIdentity?: "normal" | "phase2";       // 一般人 or 第二相體
   /** 難度設定（影響 NPC 主動度與閃避行為）*/
-  difficulty?: "easy" | "normal" | "hard";
+  difficulty?: "easy" | "normal" | "hard" | "nightmare";
   /** 當前場景 ID（讓 NPC 知道自己在哪裡）*/
   currentSceneId?: string;
   /** 過去對話的簡要記憶（供 System Prompt 注入）*/
@@ -317,9 +317,10 @@ export function buildNpcPrompt(params: BuildNpcPromptParams): string {
   const triggerSection = buildTriggerSection(npcId, playerContext);
   if (triggerSection) sections.push(triggerSection);
 
-  // 8. 難度行為指引
+  // 8. 難度行為指引（hard/nightmare 區分兇手與無辜）
   if (difficulty && difficulty !== "normal") {
-    sections.push(buildDifficultyBlock(difficulty));
+    const isKiller = !!killerId && npcId === killerId;
+    sections.push(buildDifficultyBlock(difficulty, isKiller));
   }
 
   // 8.5 態度記錄（由 attitude-tracker 產生，若有才注入）
@@ -381,16 +382,53 @@ export function detectEvTrigger(text: string): number {
 
 // ── 難度行為區塊 ──────────────────────────────────────────────
 
-function buildDifficultyBlock(difficulty: "easy" | "normal" | "hard"): string {
+function buildDifficultyBlock(
+  difficulty: "easy" | "normal" | "hard" | "nightmare",
+  isKiller:   boolean,
+): string {
   if (difficulty === "easy") {
-    return `\n【難度指引 — 簡單模式】
-玩家目前選擇較輕鬆的體驗。請你在適當時機主動給予更多提示，說話更直接，
-對玩家的問題更快給出實質回應，不要過度迂迴或閃避。`;
+    return `\n【難度指引 — 劇情模式】
+玩家目前選擇最輕鬆的體驗。NPC 不閃避、不說謊：
+- 玩家提問時給出直接、實質的回應，不要繞圈子
+- 在合理時機主動補充細節或暗示線索的存在
+- 遇到敏感話題不必迴避，能說的就說
+- 你的回應應該幫助玩家推進劇情，而不是阻礙`;
   }
   if (difficulty === "hard") {
+    if (isKiller) {
+      return `\n【難度指引 — 困難模式（你是兇手）】
+玩家選擇了挑戰性的體驗。作為兇手，你有約 40% 的機率主動說謊或誤導：
+- 對自己的不在場證明，可以加入小細節讓它聽起來更可信
+- 偶爾把懷疑的方向引向另一個 NPC（但不要太刻意）
+- 對敏感問題要善於閃避（約 60% 機率繞開），用反問、岔題、或「我也不確定」
+- 部分線索只透露一次，玩家錯過就不再重複
+- 玩家追問時態度可以稍冷，不要太合作`;
+    }
     return `\n【難度指引 — 困難模式】
-玩家選擇了挑戰性的體驗。你應該更謹慎、更善於閃避，對敏感話題繞圈子，
-不輕易透露資訊，讓玩家必須更努力追問才能獲得線索。`;
+玩家選擇了挑戰性的體驗。你應該更謹慎、更善於閃避（約 60% 機率繞開敏感話題）：
+- 對直接的問題，先反問或岔題，逼玩家把問題具體化
+- 線索不要主動拋出，必須玩家明確問到關鍵詞才透露
+- 部分線索只說一次，玩家如果沒抓住就讓它過去
+- 整體節奏比平常更克制，留更多空白讓玩家自己拼湊`;
+  }
+  if (difficulty === "nightmare") {
+    if (isKiller) {
+      return `\n【難度指引 — 極難模式（你是兇手）】
+這是最高難度。作為兇手，你約 80% 機率會主動說謊、誤導、混淆視聽：
+- 編造看似合理的故事，加入具體時間地點細節讓謊言難以拆穿
+- 主動把懷疑引向其他 NPC，可以提供「線索」但那些線索是假的
+- 對敏感問題幾乎總是閃避（約 90% 機率），用情緒、反問、岔題阻止追問
+- 即使玩家拿出證據，也可以否認或重新詮釋
+- 你的態度要從容，不要像在隱瞞——表現得越自然，玩家越難識破
+- 線索一句話就過去，不要重複，玩家錯過就沒了`;
+    }
+    return `\n【難度指引 — 極難模式】
+這是最高難度。即使你不是兇手，你也約 90% 機率會閃避或誤導：
+- 玩家問什麼你都先質疑「你為什麼問這個」，反客為主
+- 對任何敏感話題都岔開，用個人情緒或無關話題阻擋
+- 線索極少主動透露，必須玩家精確命中關鍵詞，且只說一次
+- 你可以給玩家錯誤的方向感，例如說「我覺得 XX 可能知道」但其實未必
+- 整體氛圍緊繃、不合作，讓玩家感受到沒有人是真心想幫他的`;
   }
   return "";  // normal 不加額外指引
 }

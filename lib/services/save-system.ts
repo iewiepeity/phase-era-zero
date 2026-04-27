@@ -65,7 +65,7 @@ export function captureLocalSave(sessionId: string): GameSaveData {
       actionPoints:    getInt(STORAGE_KEYS.ACTION_POINTS(sessionId), -1),
       maxActionPoints: getInt(STORAGE_KEYS.MAX_ACTION_POINTS(sessionId), 30),
       visitedScenes:   (get(STORAGE_KEYS.VISITED_SCENES(sessionId)) || "").split(",").filter(Boolean),
-      achievements:    (get(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) || "").split(",").filter(Boolean),
+      achievements:    (get(STORAGE_KEYS.ACHIEVEMENTS) || "").split(",").filter(Boolean),
       seenIntro:       get(STORAGE_KEYS.SEEN_INTRO(sessionId)) === "true",
       silentEnding:    get(STORAGE_KEYS.SILENT_ENDING(sessionId)) === "true",
     },
@@ -92,7 +92,7 @@ export function restoreLocalSave(save: GameSaveData): void {
   if (state.visitedScenes.length > 0)
     localStorage.setItem(STORAGE_KEYS.VISITED_SCENES(sessionId), state.visitedScenes.join(","));
   if (state.achievements.length > 0)
-    localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), state.achievements.join(","));
+    localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, state.achievements.join(","));
   if (state.seenIntro)
     localStorage.setItem(STORAGE_KEYS.SEEN_INTRO(sessionId), "true");
   if (state.silentEnding)

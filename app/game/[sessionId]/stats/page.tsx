@@ -71,7 +71,7 @@ export default function StatsPage() {
     const visitedRaw    = get(STORAGE_KEYS.VISITED_SCENES(sessionId));
     const visitedScenes = visitedRaw ? visitedRaw.split(",").filter(Boolean) : [];
 
-    const achievementsRaw = get(STORAGE_KEYS.ACHIEVEMENTS(sessionId));
+    const achievementsRaw = get(STORAGE_KEYS.ACHIEVEMENTS);
     const achievements    = achievementsRaw ? achievementsRaw.split(",").filter(Boolean) : [];
 
     const eavesdropRaw = get(`pez_eavesdrop_${sessionId}`);

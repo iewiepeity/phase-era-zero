@@ -30,8 +30,8 @@ export const STORAGE_KEYS = {
   DIFFICULTY: (sessionId: string) => `pez_difficulty_${sessionId}`,
   /** 本局已訪問場景清單（逗號分隔）*/
   VISITED_SCENES: (sessionId: string) => `pez_visited_${sessionId}`,
-  /** 本局已解鎖成就清單（逗號分隔）*/
-  ACHIEVEMENTS: (sessionId: string) => `pez_achievements_${sessionId}`,
+  /** 已解鎖成就清單（逗號分隔，跨 session 累積）*/
+  ACHIEVEMENTS: "pez_achievements_all",
   /** 本局場景物件已互動清單 key: sceneId → comma-separated item IDs */
   SCENE_INTERACTED: (sessionId: string, sceneId: string) => `pez_interacted_${sessionId}_${sceneId}`,
   /** 剩餘行動點 */

@@ -25,7 +25,7 @@ export default function AchievementsPage() {
   // 讀取已解鎖成就（跨局，使用固定鍵）
   const unlockedIds = useMemo((): Set<string> => {
     if (typeof window === "undefined") return new Set();
-    const raw = localStorage.getItem(`pez_achievements_all`) ?? "";
+    const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) ?? "";
     return new Set(raw.split(",").filter(Boolean));
   }, []);
 

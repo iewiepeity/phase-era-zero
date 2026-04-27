@@ -45,7 +45,7 @@ export default function AccusePage() {
   useEffect(() => {
     // 讀取已收集線索 ID（用於顯示數量）
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId));
+      const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
       void raw; // achievements not needed here
     } catch { /* ignore */ }
 
@@ -74,7 +74,7 @@ export default function AccusePage() {
       // 讀取已解鎖成就，傳給 API
       const alreadyUnlockedAchievements = (() => {
         try {
-          const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "";
+          const raw = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) ?? "";
           return raw.split(",").filter(Boolean);
         } catch { return []; }
       })();
@@ -95,9 +95,9 @@ export default function AccusePage() {
 
       // 解鎖新成就
       if (Array.isArray(data.newAchievements) && data.newAchievements.length > 0) {
-        const current = (localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId)) ?? "").split(",").filter(Boolean);
+        const current = (localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) ?? "").split(",").filter(Boolean);
         const merged  = [...new Set([...current, ...data.newAchievements.map((a: { id: string }) => a.id)])];
-        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS(sessionId), merged.join(","));
+        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, merged.join(","));
       }
 
       // 若指控錯誤，記錄不可逆後果（該 NPC 拒絕後續對話）
